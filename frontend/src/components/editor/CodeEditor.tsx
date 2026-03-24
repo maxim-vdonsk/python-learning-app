@@ -46,8 +46,12 @@ export default function CodeEditor({
   };
 
   const showNextHint = () => {
-    setCurrentHint((prev) => (prev + 1) % hints.length);
-    setShowHints(true);
+    if (showHints) {
+      setCurrentHint((prev) => (prev + 1) % hints.length);
+    } else {
+      setCurrentHint(0);
+      setShowHints(true);
+    }
   };
 
   return (
