@@ -16,10 +16,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # Только проверенные рабочие провайдеры, строками (lazy resolve)
+# Обновленный список - Free2GPT больше не работает (возвращает HTML)
 PROVIDER_CHAIN = [
-    ("Yqcloud",    "gpt-4o-mini"),
-    ("OperaAria",  "gpt-4o-mini"),
-    ("Mintlify",   "gpt-4o-mini"),
+    ("Yqcloud", "gpt-4o-mini"),
+    ("OperaAria", "gpt-4o-mini"),
 ]
 
 # Статичные мотивационные фразы — fallback когда AI недоступен
@@ -56,6 +56,7 @@ class AIService:
         """
         Пробует провайдеры из PROVIDER_CHAIN по очереди.
         Возвращает первый успешный ответ.
+        Общий дедлайн на все провайдеры = timeout * 1.5
         """
         from g4f.client import AsyncClient
 
@@ -65,43 +66,116 @@ class AIService:
         ]
 
         last_error = "нет провайдеров"
+        successful_response = None
+
+        # Общий дедлайн на все попытки
+        overall_deadline = asyncio.get_event_loop().time() + (timeout * 1.5)
+        
+        logger.info(f"AI: начинаю перебор провайдеров, дедлайн через {timeout * 1.5}с")
+
         for provider_name, model in PROVIDER_CHAIN:
+            # Проверяем общий дедлайн перед каждой попыткой
+            if asyncio.get_event_loop().time() >= overall_deadline:
+                logger.warning(f"AI: превышен общий дедлайн ({timeout * 1.5}с)")
+                last_error = "превышен общий дедлайн"
+                break
+
             provider = _get_provider(provider_name)
             label = provider_name or "auto"
 
             if provider_name is not None and provider is None:
                 logger.debug(f"AI: провайдер {provider_name} не найден, пропускаем")
                 continue
+            
+            logger.info(f"AI: === Попытка {PROVIDER_CHAIN.index((provider_name, model)) + 1}/{len(PROVIDER_CHAIN)}: {label}/{model} ===")
 
             try:
                 logger.info(f"AI: пробую {label}/{model}")
                 client = AsyncClient(provider=provider)
+                
+                # Вычисляем остаток времени для текущей попытки
+                remaining_time = overall_deadline - asyncio.get_event_loop().time()
+                attempt_timeout = min(timeout, max(5, remaining_time))
+                
                 resp = await asyncio.wait_for(
                     client.chat.completions.create(
                         model=model,
                         messages=messages,
                     ),
-                    timeout=timeout,
+                    timeout=attempt_timeout,
                 )
                 text = (resp.choices[0].message.content or "").strip()
-                # Проверяем что ответ не пустой и не страница логина
-                if (text
-                        and len(text) > 5
-                        and "log in" not in text[:50].lower()
-                        and "sign in" not in text[:50].lower()
-                        and "[AI недоступен]" not in text):
-                    logger.info(f"AI: успех через {label}/{model} ({len(text)} символов)")
-                    return text
-                last_error = f"{label}: подозрительный ответ: {text[:60]}"
-                logger.warning(f"AI: {last_error}")
+                successful_response = text
+                
             except asyncio.TimeoutError:
-                last_error = f"{label}: таймаут {timeout}с"
+                last_error = f"{label}: таймаут {attempt_timeout}с"
                 logger.warning(f"AI таймаут: {last_error}")
+                continue
             except Exception as exc:
                 last_error = f"{label}: {exc}"
                 logger.warning(f"AI ошибка: {last_error}")
+                continue
+            
+            # Проверяем что ответ не пустой
+            if not successful_response:
+                last_error = f"{label}: пустой ответ"
+                logger.warning(f"AI: {last_error}")
+                successful_response = None
+                continue
+            
+            # Проверяем на ошибки аутентификации и другие API-ошибки
+            text_lower = successful_response.lower()
+            if "authentication error" in text_lower or "no api key" in text_lower:
+                last_error = f"{label}: ошибка аутентификации"
+                logger.warning(f"AI: {last_error}")
+                successful_response = None
+                continue
+            
+            # Проверяем на HTML-ответы (когда провайдер вернул страницу вместо JSON)
+            if text_lower.startswith("<!doctype") or text_lower.startswith("<html"):
+                last_error = f"{label}: вернул HTML вместо ответа"
+                logger.warning(f"AI: провайдер {label} вернул HTML-страницу вместо ответа")
+                successful_response = None
+                continue
+            
+            # Проверяем на стриминг-ответы с ошибками (data: {...})
+            if successful_response.startswith("data:"):
+                # Пытаемся распарсить как JSON ошибку
+                try:
+                    import json as json_lib
+                    # Извлекаем первую data: строку
+                    first_line = successful_response.split("\n")[0]
+                    if first_line.startswith("data:"):
+                        json_str = first_line[5:].strip()
+                        if json_str != "[DONE]":
+                            error_data = json_lib.loads(json_str)
+                            if error_data.get("type") == "error":
+                                error_text = error_data.get("errorText", "Неизвестная ошибка")
+                                last_error = f"{label}: {error_text}"
+                                logger.warning(f"AI: ошибка от провайдера: {last_error}")
+                                successful_response = None
+                                continue
+                except Exception:
+                    # Если не распарсили, продолжаем проверки ниже
+                    pass
+            
+            # Проверяем на подозрительные ответы
+            if (len(successful_response) <= 5
+                    or "log in" in successful_response[:50].lower()
+                    or "sign in" in successful_response[:50].lower()
+                    or "[AI недоступен]" in successful_response
+                    or successful_response.startswith("data:")):
+                last_error = f"{label}: подозрительный ответ: {successful_response[:60]}"
+                logger.warning(f"AI: {last_error}")
+                successful_response = None
+                continue
+            
+            # Успех!
+            logger.info(f"AI: успех через {label}/{model} ({len(successful_response)} символов)")
+            return successful_response
 
-        logger.error(f"AI: все провайдеры исчерпаны. {last_error}")
+        # Все провайдеры исчерпаны
+        logger.error(f"AI: все провайдеры исчерпаны после {len(PROVIDER_CHAIN)} попыток. Последняя ошибка: {last_error}")
         return f"[AI недоступен] {last_error}"
 
     # ------------------------------------------------------------------ #
@@ -130,35 +204,62 @@ class AIService:
         return self._parse_json(resp, {"theory": resp, "examples": []})
 
     async def generate_task(self, topic: str, difficulty: str,
-                            lesson_title: str) -> dict:
-        """Генерирует задачу по теме и сложности."""
+                            lesson_title: str,
+                            prev_topics: list[str] | None = None) -> dict:
+        """
+        Генерирует задачу по теме и сложности.
+
+        prev_topics — список тем, пройденных ДО этого урока.
+        AI органично включает их в задачу (не сложнее текущей темы).
+        """
         hints_map = {
             "easy":   "1-5 строк кода, базовый синтаксис",
             "medium": "10-20 строк, несколько концепций",
             "hard":   "сложный алгоритм, оптимальное решение",
         }
         system = (
-            "Ты создаёшь чёткие задачи по Python. "
+            "Ты создаёшь чёткие практические задачи по Python для начинающих. "
             "Отвечай ТОЛЬКО валидным JSON на русском языке."
         )
-        prompt = f"""Задача по Python: тема "{lesson_title}", сложность {difficulty} ({hints_map.get(difficulty,'')}).
+
+        # Блок с ранее изученными темами
+        if prev_topics:
+            prev_block = (
+                f"\nУченик уже изучил эти темы (можно использовать в задаче, "
+                f"но не делать их главными):\n"
+                + "\n".join(f"  - {t}" for t in prev_topics[-10:])  # последние 10
+                + "\n"
+            )
+        else:
+            prev_block = ""
+
+        prompt = f"""Создай задачу по Python для новичка.
+
+ТЕКУЩАЯ ТЕМА УРОКА: «{lesson_title}» (topic: {topic})
+СЛОЖНОСТЬ: {difficulty} ({hints_map.get(difficulty, '')})
+{prev_block}
+ТРЕБОВАНИЯ:
+- Задача должна проверять именно тему «{lesson_title}»
+- Сложность НЕ выше {difficulty} — не должна требовать знаний сложнее текущей темы
+- Можно органично использовать ранее пройденные темы как вспомогательный инструмент
+- Конкретные входные/выходные данные для проверки
 
 Верни ТОЛЬКО JSON без лишнего текста:
 {{
-  "title": "Название",
-  "description": "Описание с примерами ввода/вывода",
+  "title": "Короткое название задачи",
+  "description": "Условие задачи с примерами ввода и вывода",
   "hints": ["подсказка 1", "подсказка 2"],
   "test_cases": [
     {{"input": "ввод", "expected_output": "вывод"}},
     {{"input": "ввод2", "expected_output": "вывод2"}}
   ],
   "solution_template": "# Напишите решение здесь\\n",
-  "category": "strings"
+  "category": "{topic}"
 }}"""
 
         resp = await self._chat(system, prompt)
         return self._parse_json(resp, {
-            "title": f"Задача по {topic}",
+            "title": f"Задача по теме: {lesson_title}",
             "description": resp,
             "hints": [],
             "test_cases": [],
@@ -177,29 +278,38 @@ class AIService:
         """Анализирует код студента, возвращает отзыв и оценку."""
         system = (
             "Ты — доброжелательный ментор Python. "
-            "Анализируй код: правильность, стиль, производительность. "
+            "Оценивай код по критериям: правильность логики, читаемость, эффективность. "
+            "ВАЖНО: Не придирайся к формату ввода (input/split/отдельные строки) — это не ошибка. "
+            "Если код проходит тесты — он правильный, даже если стиль ввода отличается от примера. "
+            "Фокусируйся на логике, алгоритмах, именовании переменных. "
             "Отвечай на русском языке, только валидным JSON."
         )
         status  = "ПРАВИЛЬНО" if is_correct else "НЕПРАВИЛЬНО"
         t_str   = f"{execution_time_ms:.1f}мс" if execution_time_ms else "?"
         err_str = f"\nОшибка: {error}" if error else ""
 
-        prompt = f"""Проанализируй код:
+        prompt = f"""Проанализируй код студента:
 
 ЗАДАЧА: {task_description[:400]}
 КОД:
 ```python
 {code[:1200]}
 ```
-Статус: {status} | Время: {t_str}{err_str}
+Статус тестов: {status} | Время выполнения: {t_str}{err_str}
+
+КРИТЕРИИ ОЦЕНКИ:
+- Если тесты пройдены (статус ПРАВИЛЬНО) — код рабочий, ставь 80-100 баллов
+- Если тесты не пройдены — ставь 20-50 баллов в зависимости от логики
+- Формат ввода (input().split() vs два input()) НЕ является ошибкой
+- Смотри на логику, алгоритм, читаемость, а не на стиль ввода
 
 Верни JSON:
 {{
-  "feedback": "анализ 2-3 абзаца",
-  "score": 80,
-  "recommendations": ["совет 1", "совет 2"],
-  "style_issues": [],
-  "performance_note": ""
+  "feedback": "подробный разбор 2-3 абзаца: что правильно, что можно улучшить",
+  "score": 85,
+  "recommendations": ["конкретный совет 1", "конкретный совет 2"],
+  "style_issues": ["если есть проблемы с именованием/стилем"],
+  "performance_note": "заметка по производительности если есть"
 }}"""
 
         resp = await self._chat(system, prompt)

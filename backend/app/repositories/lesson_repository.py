@@ -41,6 +41,35 @@ class LessonRepository:
         )
         return result.scalars().all()
 
+    async def get_previous_topics(self, lesson_id: int) -> List[str]:
+        """
+        Возвращает список topic всех уроков, идущих ДО текущего
+        (по week_id + order). Используется для составления задачи
+        с учётом уже пройденного материала.
+        """
+        current = await self.get_lesson_by_id(lesson_id)
+        if not current:
+            return []
+
+        result = await self.db.execute(
+            select(Lesson.topic, Lesson.title).where(
+                (Lesson.week_id < current.week_id) |
+                (
+                    (Lesson.week_id == current.week_id) &
+                    (Lesson.order < current.order)
+                )
+            ).order_by(Lesson.week_id, Lesson.order)
+        )
+        rows = result.all()
+        # Убираем дубли topic, сохраняем порядок
+        seen = set()
+        topics = []
+        for topic, title in rows:
+            if topic not in seen:
+                seen.add(topic)
+                topics.append(f"{topic} ({title})")
+        return topics
+
     async def update_theory(self, lesson_id: int, theory: str, examples: str) -> None:
         """Update lesson theory content."""
         lesson = await self.get_lesson_by_id(lesson_id)

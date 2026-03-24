@@ -79,3 +79,31 @@ async def generate_task(
     """Generate a new AI task for a topic."""
     service = TaskService(db)
     return await service.generate_ai_task(topic, difficulty, lesson_id)
+
+
+@router.post("/lessons/{lesson_id}/regenerate")
+async def regenerate_lesson_task(
+    lesson_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Generate a new task for a specific lesson (replaces existing one)."""
+    from app.services.lesson_service import LessonService
+    from fastapi import HTTPException
+    
+    lesson_service = LessonService(db)
+    
+    # Get lesson to get topic and difficulty
+    lesson = await lesson_service.lesson_repo.get_lesson_by_id(lesson_id)
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Урок не найден")
+    
+    # Generate new task
+    task_service = TaskService(db)
+    new_task = await task_service.generate_ai_task(
+        topic=lesson.topic,
+        difficulty="easy",  # или можно сохранить сложность из урока если есть
+        lesson_id=lesson_id,
+    )
+    
+    return new_task

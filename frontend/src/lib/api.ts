@@ -61,6 +61,10 @@ export const api = {
     });
     return data;
   },
+  getLessonTask: async (lessonId: number) => {
+    const { data } = await apiClient.get(`/api/v1/lessons/${lessonId}/task`);
+    return data;
+  },
   initializeCourse: async () => {
     const { data } = await apiClient.post("/api/v1/lessons/initialize");
     return data;
@@ -86,6 +90,10 @@ export const api = {
     const { data } = await apiClient.post("/api/v1/tasks/generate", null, {
       params: { topic, difficulty, lesson_id: lessonId },
     });
+    return data;
+  },
+  regenerateLessonTask: async (lessonId: number) => {
+    const { data } = await apiClient.post(`/api/v1/tasks/lessons/${lessonId}/regenerate`);
     return data;
   },
 

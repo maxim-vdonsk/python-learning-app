@@ -69,18 +69,26 @@ export default function LessonPage() {
     setLoadingTask(true);
     setResult(null);
     try {
-      // Try to get existing task for this lesson first
-      const tasks = await api.getTasks({ lesson_id: lessonId, limit: 1 });
-      if (tasks && tasks.length > 0) {
-        const fullTask = await api.getTask(tasks[0].id);
-        setTask(fullTask);
-      } else if (theory) {
-        // Generate a new task with AI
-        const generated = await api.generateTask(theory.title, "easy", lessonId);
-        setTask(generated);
-      }
+      // Единый endpoint: возвращает существующее задание или генерирует один раз
+      const t = await api.getLessonTask(lessonId);
+      setTask(t);
     } catch {
       toast.error("Не удалось загрузить задачу");
+    } finally {
+      setLoadingTask(false);
+    }
+  };
+
+  const regenerateTask = async () => {
+    setLoadingTask(true);
+    setResult(null);
+    try {
+      // Генерируем новое задание для этого урока
+      const t = await api.regenerateLessonTask(lessonId);
+      setTask(t);
+      toast.success("Новая задача сгенерирована!");
+    } catch (error: any) {
+      toast.error(error.message || "Не удалось сгенерировать задачу");
     } finally {
       setLoadingTask(false);
     }
@@ -271,11 +279,12 @@ export default function LessonPage() {
                         {task.difficulty?.toUpperCase()}
                       </span>
                       <button
-                        onClick={loadTask}
-                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-neon-blue transition-colors font-mono"
+                        onClick={regenerateTask}
+                        disabled={loadingTask}
+                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-neon-blue transition-colors font-mono disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <RefreshCw size={12} />
-                        Другая задача
+                        {loadingTask ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+                        {loadingTask ? "Генерация..." : "Другая задача"}
                       </button>
                     </div>
                     <h2 className="font-mono font-bold text-gray-100 text-lg mb-3">{task.title}</h2>

@@ -30,8 +30,11 @@ class TaskRepository:
         search: Optional[str] = None,
         limit: int = 20,
         offset: int = 0,
+        order_by: str = "id_asc",
     ) -> List[Task]:
         """Get tasks with optional filters."""
+        from sqlalchemy import desc
+        
         query = select(Task)
         if difficulty:
             query = query.where(Task.difficulty == difficulty)
@@ -43,6 +46,13 @@ class TaskRepository:
             query = query.where(
                 or_(Task.title.ilike(f"%{search}%"), Task.description.ilike(f"%{search}%"))
             )
+        
+        # Sorting
+        if order_by == "id_desc":
+            query = query.order_by(desc(Task.id))
+        else:  # default "id_asc"
+            query = query.order_by(Task.id)
+        
         query = query.limit(limit).offset(offset)
         result = await self.db.execute(query)
         return result.scalars().all()

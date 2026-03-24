@@ -1,6 +1,7 @@
 """
 Lessons API endpoints.
 """
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +32,53 @@ async def get_theory(
 ):
     """Get theory content for a lesson, generating via AI if needed."""
     service = LessonService(db)
-    return await service.get_lesson_theory(lesson_id, current_user.id, regenerate)
+    try:
+        # Таймаут на всю операцию генерации теории
+        result = await asyncio.wait_for(
+            service.get_lesson_theory(lesson_id, current_user.id, regenerate),
+            timeout=60  # 60 секунд на генерацию AI
+        )
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Превышено время ожидания генерации теории. Попробуйте позже или нажмите 'Сгенерировать снова'"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при получении теории: {str(e)}"
+        )
+
+
+@router.get("/{lesson_id}/task")
+async def get_lesson_task(
+    lesson_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get (or generate once) the task for a lesson. Always returns the same task."""
+    service = LessonService(db)
+    try:
+        result = await asyncio.wait_for(
+            service.get_or_create_lesson_task(lesson_id),
+            timeout=60  # 60 секунд на генерацию задачи
+        )
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=504,
+            detail="Превышено время ожидания генерации задачи. Попробуйте позже"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ошибка при получении задачи: {str(e)}"
+        )
 
 
 @router.post("/initialize")

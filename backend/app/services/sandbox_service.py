@@ -55,9 +55,11 @@ if {repr(stdin_data)}:
 # User code
 {code}
 """
-            result = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.docker_client.containers.run(
+            # Run container synchronously in executor
+            loop = asyncio.get_event_loop()
+            
+            def run_container():
+                container = self.docker_client.containers.run(
                     image=settings.SANDBOX_IMAGE,
                     command=["python3", "-c", runner_code],
                     mem_limit=settings.SANDBOX_MEM_LIMIT,
@@ -67,8 +69,19 @@ if {repr(stdin_data)}:
                     remove=True,
                     stdout=True,
                     stderr=True,
-                    timeout=timeout,
+                    detach=True,
                 )
+                
+                # Wait for container to finish
+                container.wait()
+                
+                # Get logs
+                return container.logs()
+            
+            # Execute with timeout
+            result = await asyncio.wait_for(
+                loop.run_in_executor(None, run_container),
+                timeout=timeout
             )
 
             execution_time = (time.time() - start_time) * 1000
@@ -78,10 +91,18 @@ if {repr(stdin_data)}:
                 "output": output.strip(),
                 "error": None,
                 "execution_time_ms": round(execution_time, 2),
-                "memory_used_mb": None,  # Docker stats require additional call
+                "memory_used_mb": None,
                 "success": True,
             }
 
+        except asyncio.TimeoutError:
+            return {
+                "output": "",
+                "error": f"Превышен лимит времени выполнения ({timeout}с)",
+                "execution_time_ms": timeout * 1000,
+                "memory_used_mb": None,
+                "success": False,
+            }
         except docker.errors.ContainerError as e:
             execution_time = (time.time() - start_time) * 1000
             error_output = e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e)
@@ -93,9 +114,10 @@ if {repr(stdin_data)}:
                 "success": False,
             }
         except Exception as e:
+            error_msg = str(e)
             return {
                 "output": "",
-                "error": f"Ошибка выполнения: {str(e)}",
+                "error": f"Ошибка выполнения: {error_msg}",
                 "execution_time_ms": round((time.time() - start_time) * 1000, 2),
                 "memory_used_mb": None,
                 "success": False,
