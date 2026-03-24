@@ -136,7 +136,7 @@ export default function DashboardPage() {
                 height={10}
               />
               <div className="mt-4 flex gap-3">
-                <Link href="/lessons" className="flex-1">
+                <Link href="/lessons" className="flex-1 block">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     className="w-full btn-neon-purple text-sm flex items-center justify-center gap-2"
@@ -145,7 +145,7 @@ export default function DashboardPage() {
                     Продолжить обучение
                   </motion.button>
                 </Link>
-                <Link href="/tasks" className="flex-1">
+                <Link href="/tasks" className="flex-1 block">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     className="w-full btn-neon-blue text-sm flex items-center justify-center gap-2"
