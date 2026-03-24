@@ -33,7 +33,7 @@
 | AI | gpt4free |
 | Редактор кода | Monaco Editor |
 | Песочница | Docker-in-Docker |
-| Деплой | Docker Compose |
+| Деплой | Docker Compose, Caddy |
 
 ---
 
@@ -84,6 +84,7 @@ python-learning-app/
 │   │       ├── api.ts           # Axios клиент
 │   │       └── store.ts         # Zustand (состояние авторизации)
 │   └── Dockerfile
+├── Caddyfile              # Конфигурация reverse proxy
 ├── docker-compose.yml
 └── docker-compose.dev.yml
 ```
@@ -113,7 +114,7 @@ cp frontend/.env.local.example frontend/.env.local
 
 Отредактируй `backend/.env` — обязательно задай свой `SECRET_KEY`.
 
-### 3. Запуск
+### 3. Локальный запуск (без домена)
 
 ```bash
 docker-compose up -d --build
@@ -123,9 +124,30 @@ docker-compose up -d --build
 
 | Сервис | URL |
 |--------|-----|
-| Frontend | http://localhost:3000 |
-| Backend API | http://localhost:8000 |
-| API документация (Swagger) | http://localhost:8000/docs |
+| Frontend | http://localhost |
+| Backend API | http://localhost/api/v1 |
+| API документация (Swagger) | http://localhost/api/v1/../docs |
+
+### 3а. Деплой с доменом (HTTPS автоматически)
+
+Создай `.env` файл в корне проекта:
+
+```env
+DOMAIN=yourdomain.com
+NEXT_PUBLIC_API_URL=https://yourdomain.com
+ALLOWED_ORIGINS=["https://yourdomain.com"]
+SECRET_KEY=your-super-secret-key-min-32-chars
+```
+
+Запусти:
+
+```bash
+docker-compose up -d --build
+```
+
+Caddy автоматически получит SSL-сертификат через Let's Encrypt. Сайт будет доступен по `https://yourdomain.com`.
+
+> **Требования для HTTPS:** домен должен указывать на IP сервера (A-запись), порты 80 и 443 должны быть открыты.
 
 ### 4. Инициализация данных курса
 
@@ -160,8 +182,20 @@ GPT4FREE_MODEL=gpt-4o-mini
 ### frontend/.env.local
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
+# Локально (Caddy проксирует /api/* на бэкенд)
+NEXT_PUBLIC_API_URL=http://localhost
+
+# С доменом
+# NEXT_PUBLIC_API_URL=https://yourdomain.com
 ```
+
+### Caddy (Caddyfile)
+
+Caddy используется как reverse proxy:
+- `yourdomain.com/api/*` → FastAPI backend (порт 8000)
+- `yourdomain.com/*` → Next.js frontend (порт 3000)
+
+При указании реального домена Caddy автоматически получает и обновляет SSL-сертификат через Let's Encrypt.
 
 ### Настройка gpt4free
 
@@ -268,6 +302,16 @@ volumes:
 **Ошибка подключения к базе данных** — проверьте `docker-compose logs db`, затем перезапустите бэкенд:
 ```bash
 docker-compose restart backend
+```
+
+**HTTPS не работает** — убедитесь, что:
+1. A-запись домена указывает на IP сервера
+2. Порты 80 и 443 открыты в файрволе
+3. Переменная `DOMAIN` задана в `.env`
+
+Логи Caddy:
+```bash
+docker-compose logs caddy
 ```
 
 ---

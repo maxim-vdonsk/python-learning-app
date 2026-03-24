@@ -20,6 +20,26 @@ services:
     networks:
       - pyneon_network
 
+  # Caddy reverse proxy (HTTP/HTTPS)
+  caddy:
+    image: caddy:2-alpine
+    container_name: pyneon_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - pyneon_network
+
   # FastAPI Backend
   backend:
     build:
@@ -31,7 +51,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/python_learning
       SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
       DEBUG: ${DEBUG:-false}
-      ALLOWED_ORIGINS: '["http://localhost:3000", "http://frontend:3000", "http://144.31.164.246:3000"]'
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-'["http://localhost:3000", "http://localhost", "https://localhost"]'}
       SANDBOX_IMAGE: python:3.11-alpine
       SANDBOX_TIMEOUT: "10"
       SANDBOX_MEM_LIMIT: "64m"
@@ -39,8 +59,6 @@ services:
     volumes:
       - ./backend:/app
       - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker sandbox
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -54,13 +72,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
     container_name: pyneon_frontend
     restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-    ports:
-      - "3000:3000"
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost}
     depends_on:
       - backend
     networks:
@@ -69,6 +85,10 @@ services:
 volumes:
   postgres_data:
     name: pyneon_postgres_data
+  caddy_data:
+    name: pyneon_caddy_data
+  caddy_config:
+    name: pyneon_caddy_config
 
 networks:
   pyneon_network:
