@@ -1,6 +1,6 @@
-# PyNeon — Python Learning Platform
+# PyNeon — Платформа для изучения Python
 
-AI-powered platform for learning Python from scratch. Generates theory, tasks, and code feedback via **gpt4free** — no paid APIs required.
+Платформа для изучения Python с нуля на основе AI. Генерирует теорию, задачи и обратную связь по коду через **gpt4free** — без платных API.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
@@ -10,79 +10,79 @@ AI-powered platform for learning Python from scratch. Generates theory, tasks, a
 
 ---
 
-## Features
+## Возможности
 
-- 12-week Python course structured from basics to problem-solving level
-- AI-generated theory and tasks per lesson topic (via gpt4free)
-- Monaco Editor in the browser for writing and submitting code
-- Sandboxed code execution inside Docker containers
-- JWT authentication
-- XP points, levels, streaks, and achievements system
-- Leaderboard and personal progress dashboard
+- 12-недельный курс Python от основ до уверенного решения задач
+- AI-генерация теории и задач по теме урока (через gpt4free)
+- Monaco Editor в браузере для написания и отправки кода
+- Выполнение кода в изолированном Docker-контейнере
+- Аутентификация через JWT
+- Система XP, уровней, стриков и достижений
+- Таблица лидеров и личный дашборд прогресса
 
 ---
 
-## Tech Stack
+## Стек технологий
 
-| Layer | Technology |
-|-------|-----------|
+| Уровень | Технология |
+|---------|-----------|
 | Frontend | Next.js 14, TypeScript, TailwindCSS, Framer Motion |
 | Backend | FastAPI, Python 3.11 |
-| Database | PostgreSQL 16, SQLAlchemy 2.0 (async), Alembic |
-| Auth | JWT (python-jose), bcrypt |
+| База данных | PostgreSQL 16, SQLAlchemy 2.0 (async), Alembic |
+| Авторизация | JWT (python-jose), bcrypt |
 | AI | gpt4free |
-| Code Editor | Monaco Editor |
-| Sandbox | Docker-in-Docker |
-| Deploy | Docker Compose |
+| Редактор кода | Monaco Editor |
+| Песочница | Docker-in-Docker |
+| Деплой | Docker Compose |
 
 ---
 
-## Project Structure
+## Структура проекта
 
 ```
 python-learning-app/
 ├── backend/
 │   ├── app/
 │   │   ├── api/v1/
-│   │   │   ├── auth.py          # Registration, login
-│   │   │   ├── lessons.py       # Lessons, theory generation
-│   │   │   ├── tasks.py         # Tasks, AI generation
-│   │   │   ├── submissions.py   # Code submission & execution
-│   │   │   ├── progress.py      # Progress, leaderboard
-│   │   │   └── achievements.py  # Achievements
+│   │   │   ├── auth.py          # Регистрация, вход
+│   │   │   ├── lessons.py       # Уроки, генерация теории
+│   │   │   ├── tasks.py         # Задачи, AI-генерация
+│   │   │   ├── submissions.py   # Отправка и выполнение кода
+│   │   │   ├── progress.py      # Прогресс, рейтинг
+│   │   │   └── achievements.py  # Достижения
 │   │   ├── core/
-│   │   │   ├── config.py        # App configuration
-│   │   │   ├── database.py      # Async SQLAlchemy setup
-│   │   │   └── security.py      # JWT + password hashing
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── schemas/             # Pydantic schemas
-│   │   ├── repositories/        # Data access layer
+│   │   │   ├── config.py        # Конфигурация приложения
+│   │   │   ├── database.py      # Асинхронный SQLAlchemy
+│   │   │   └── security.py      # JWT + хэширование паролей
+│   │   ├── models/              # SQLAlchemy модели
+│   │   ├── schemas/             # Pydantic схемы
+│   │   ├── repositories/        # Слой доступа к данным
 │   │   ├── services/
-│   │   │   ├── ai_service.py        # gpt4free integration
-│   │   │   ├── sandbox_service.py   # Docker code execution
+│   │   │   ├── ai_service.py        # Интеграция с gpt4free
+│   │   │   ├── sandbox_service.py   # Выполнение кода в Docker
 │   │   │   ├── lesson_service.py
 │   │   │   ├── task_service.py
 │   │   │   ├── progress_service.py
 │   │   │   └── achievement_service.py
 │   │   ├── data/
-│   │   │   └── course_structure.py  # 12-week curriculum
+│   │   │   └── course_structure.py  # Программа курса на 12 недель
 │   │   └── main.py
-│   ├── alembic/                 # DB migrations
+│   ├── alembic/                 # Миграции БД
 │   ├── requirements.txt
 │   └── Dockerfile
 ├── frontend/
 │   ├── src/
 │   │   ├── app/
-│   │   │   ├── auth/            # Login / Register
-│   │   │   ├── dashboard/       # User dashboard
-│   │   │   ├── lessons/[id]/    # Lesson view with theory and tasks
-│   │   │   └── tasks/           # Task catalog
+│   │   │   ├── auth/            # Вход / Регистрация
+│   │   │   ├── dashboard/       # Дашборд пользователя
+│   │   │   ├── lessons/[id]/    # Страница урока с теорией и задачами
+│   │   │   └── tasks/           # Каталог задач
 │   │   ├── components/
-│   │   │   ├── editor/          # Monaco code editor
-│   │   │   └── ui/              # Navbar, cards, progress bar
+│   │   │   ├── editor/          # Monaco редактор кода
+│   │   │   └── ui/              # Navbar, карточки, прогресс-бар
 │   │   └── lib/
-│   │       ├── api.ts           # Axios API client
-│   │       └── store.ts         # Zustand auth state
+│   │       ├── api.ts           # Axios клиент
+│   │       └── store.ts         # Zustand (состояние авторизации)
 │   └── Dockerfile
 ├── docker-compose.yml
 └── docker-compose.dev.yml
@@ -90,51 +90,51 @@ python-learning-app/
 
 ---
 
-## Getting Started
+## Быстрый старт
 
-### Requirements
+### Требования
 
 - Docker 24+
 - Docker Compose 2.x
 
-### 1. Clone
+### 1. Клонирование
 
 ```bash
 git clone https://github.com/maxim-vdonsk/python-learning-app.git
 cd python-learning-app
 ```
 
-### 2. Configure environment
+### 2. Настройка окружения
 
 ```bash
 cp backend/.env.example backend/.env
 cp frontend/.env.local.example frontend/.env.local
 ```
 
-Edit `backend/.env` and set a strong `SECRET_KEY`.
+Отредактируй `backend/.env` — обязательно задай свой `SECRET_KEY`.
 
-### 3. Run
+### 3. Запуск
 
 ```bash
 docker-compose up -d --build
 ```
 
-Wait ~30 seconds, then open:
+Подождите ~30 секунд, затем откройте:
 
-| Service | URL |
-|---------|-----|
+| Сервис | URL |
+|--------|-----|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:8000 |
-| API Docs (Swagger) | http://localhost:8000/docs |
+| API документация (Swagger) | http://localhost:8000/docs |
 
-### 4. Initialize course data
+### 4. Инициализация данных курса
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/lessons/initialize
 curl -X POST http://localhost:8000/api/v1/achievements/seed
 ```
 
-### 5. Development mode (hot-reload)
+### 5. Режим разработки (hot-reload)
 
 ```bash
 docker-compose -f docker-compose.dev.yml up
@@ -142,7 +142,7 @@ docker-compose -f docker-compose.dev.yml up
 
 ---
 
-## Configuration
+## Конфигурация
 
 ### backend/.env
 
@@ -163,55 +163,55 @@ GPT4FREE_MODEL=gpt-4o-mini
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-### gpt4free model
+### Настройка gpt4free
 
-By default the app uses `gpt-4o-mini`. If a provider is unavailable, change the model in `backend/.env`:
+По умолчанию используется модель `gpt-4o-mini`. Если провайдер недоступен, замени модель в `backend/.env`:
 
 ```env
 GPT4FREE_MODEL=gpt-3.5-turbo
 ```
 
-gpt4free selects an available provider automatically.
+gpt4free автоматически выбирает доступного провайдера.
 
 ---
 
-## API Reference
+## API
 
-Full interactive docs at **http://localhost:8000/docs**
+Полная интерактивная документация: **http://localhost:8000/docs**
 
-### Auth
+### Авторизация
 ```
 POST /api/v1/auth/register
 POST /api/v1/auth/login/json
 ```
 
-### Lessons
+### Уроки
 ```
-GET  /api/v1/lessons/course         # Full course structure
-GET  /api/v1/lessons/{id}/theory    # AI-generated theory
-POST /api/v1/lessons/initialize     # Seed course data
+GET  /api/v1/lessons/course         # Полная структура курса
+GET  /api/v1/lessons/{id}/theory    # AI-генерация теории урока
+POST /api/v1/lessons/initialize     # Инициализация данных курса
 ```
 
-### Tasks
+### Задачи
 ```
-GET  /api/v1/tasks/                 # List with filters
+GET  /api/v1/tasks/                 # Список с фильтрами
 GET  /api/v1/tasks/{id}
-POST /api/v1/tasks/generate         # AI-generate a task
+POST /api/v1/tasks/generate         # AI-генерация задачи
 ```
 
-### Submissions
+### Решения
 ```
-POST /api/v1/submissions/           # Submit code
-GET  /api/v1/submissions/my         # My submissions
+POST /api/v1/submissions/           # Отправить код на проверку
+GET  /api/v1/submissions/my         # Мои решения
 ```
 
-### Progress
+### Прогресс
 ```
 GET  /api/v1/progress/dashboard
 GET  /api/v1/progress/leaderboard
 ```
 
-### Achievements
+### Достижения
 ```
 GET  /api/v1/achievements/
 GET  /api/v1/achievements/all
@@ -220,58 +220,58 @@ POST /api/v1/achievements/seed
 
 ---
 
-## Gamification
+## Геймификация
 
-| Difficulty | XP reward |
-|------------|-----------|
+| Сложность задачи | Награда |
+|-----------------|---------|
 | Easy | +50 XP |
 | Medium | +100 XP |
 | Hard | +200 XP |
 
-Level increases every **500 XP**.
+Уровень повышается каждые **500 XP**.
 
-Achievements are awarded for completing lessons, maintaining streaks, and solving tasks.
+Достижения выдаются за прохождение уроков, поддержание стриков и решение задач.
 
 ---
 
 ## Docker
 
 ```bash
-# Start
+# Запуск
 docker-compose up -d
 
-# Stop
+# Остановка
 docker-compose down
 
-# Rebuild
+# Пересборка
 docker-compose up -d --build
 
-# Logs
+# Логи
 docker-compose logs -f backend
 
-# Reset database
+# Сброс базы данных
 docker-compose down -v && docker-compose up -d
 ```
 
 ---
 
-## Troubleshooting
+## Возможные проблемы
 
-**gpt4free not responding** — switch to another model in `.env` (`gpt-3.5-turbo`).
+**gpt4free не отвечает** — смените модель в `.env` (например, `gpt-3.5-turbo`).
 
-**Sandbox not working** — make sure Docker socket is mounted:
+**Песочница не работает** — убедитесь, что Docker socket монтируется:
 ```yaml
 volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-**Database connection error** — check `docker-compose logs db`, then restart the backend:
+**Ошибка подключения к базе данных** — проверьте `docker-compose logs db`, затем перезапустите бэкенд:
 ```bash
 docker-compose restart backend
 ```
 
 ---
 
-## License
+## Лицензия
 
 MIT
