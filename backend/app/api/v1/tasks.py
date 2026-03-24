@@ -98,12 +98,17 @@ async def regenerate_lesson_task(
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
     
+    # Get previous topics for curriculum context
+    prev_topics = await lesson_service.lesson_repo.get_previous_topics(lesson_id)
+
     # Generate new task
     task_service = TaskService(db)
     new_task = await task_service.generate_ai_task(
         topic=lesson.topic,
-        difficulty="easy",  # или можно сохранить сложность из урока если есть
+        difficulty="easy",
         lesson_id=lesson_id,
+        lesson_title=lesson.title,
+        prev_topics=prev_topics,
     )
     
     return new_task

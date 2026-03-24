@@ -116,9 +116,18 @@ class TaskService:
             "xp_earned": xp_earned,
         }
 
-    async def generate_ai_task(self, topic: str, difficulty: str, lesson_id: int = None) -> dict:
+    async def generate_ai_task(
+        self,
+        topic: str,
+        difficulty: str,
+        lesson_id: int = None,
+        lesson_title: str = None,
+        prev_topics: list = None,
+    ) -> dict:
         """Generate a new task using AI and save to database."""
-        task_data = await ai_service.generate_task(topic, difficulty, topic)
+        task_data = await ai_service.generate_task(
+            topic, difficulty, lesson_title or topic, prev_topics=prev_topics
+        )
 
         import re
         slug = re.sub(r'[^a-z0-9-]', '-', task_data["title"].lower()[:50])
