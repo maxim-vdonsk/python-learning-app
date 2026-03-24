@@ -43,11 +43,11 @@ class ProgressRepository:
         return progress
 
     async def update_task_completion(self, user_id: int, lesson_id: int, tasks_done: int, total: int) -> None:
-        """Update task completion counts."""
+        """Update task completion counts. Never downgrades already-completed progress."""
         progress = await self.get_or_create(user_id, lesson_id)
-        progress.tasks_completed = tasks_done
+        progress.tasks_completed = max(progress.tasks_completed or 0, tasks_done)
         progress.total_tasks = total
-        if tasks_done >= total and total > 0:
+        if progress.tasks_completed >= total and total > 0:
             progress.completed = True
-            progress.completed_at = datetime.utcnow()
+            progress.completed_at = progress.completed_at or datetime.utcnow()
         await self.db.flush()

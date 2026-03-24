@@ -84,19 +84,12 @@ class TaskService:
             await self.user_repo.update_xp(user_id, xp)
             xp_earned = xp
 
-        # Update progress if task belongs to lesson
+        # Update progress if task belongs to lesson.
+        # Each lesson has exactly one "current" task — total is always 1.
         if task.lesson_id:
-            lesson_tasks = await self.task_repo.get_filtered(lesson_id=task.lesson_id)
-
-            # Count correct tasks for this lesson
-            lesson_correct = 0
-            for lt in lesson_tasks:
-                subs = await self.submission_repo.get_user_submissions(user_id, lt.id)
-                if any(s.is_correct for s in subs):
-                    lesson_correct += 1
-
+            tasks_done = 1 if is_correct else 0
             await self.progress_repo.update_task_completion(
-                user_id, task.lesson_id, lesson_correct, len(lesson_tasks)
+                user_id, task.lesson_id, tasks_done, 1
             )
 
         # Check achievements
