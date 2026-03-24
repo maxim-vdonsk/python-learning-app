@@ -46,9 +46,9 @@ export default function LessonsPage() {
   return (
     <div className="min-h-screen bg-cyber-black bg-cyber-grid">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-12">
+      <div className="max-w-4xl mx-auto px-4 pt-32 md:pt-24 pb-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="font-display text-2xl font-bold text-white md:text-neon-purple mb-2">Курс Python</h1>
+          <h1 className="font-display text-2xl font-bold text-neon-purple mb-2">Курс Python</h1>
           <p className="text-gray-500 text-sm font-mono">12 недель · 48 уроков · от нуля до Yandex CodeRun</p>
         </motion.div>
 

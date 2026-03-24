@@ -65,10 +65,10 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-cyber-black bg-cyber-grid">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 pt-24 pb-12">
+      <div className="max-w-7xl mx-auto px-4 pt-32 md:pt-24 pb-12">
         {/* Welcome header */}
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <h1 className="font-display text-2xl md:text-3xl font-bold text-white md:text-neon-purple text-neon-glow mb-2">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-neon-purple text-neon-glow mb-2">
             Привет, {user?.username}
           </h1>
           {stats?.motivation_phrase && (

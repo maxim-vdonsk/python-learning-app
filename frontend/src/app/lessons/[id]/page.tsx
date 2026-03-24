@@ -129,7 +129,7 @@ export default function LessonPage() {
   return (
     <div className="min-h-screen bg-cyber-black bg-cyber-grid">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-4 pt-20 pb-12">
+      <div className="max-w-5xl mx-auto px-4 pt-32 md:pt-20 pb-12">
         {/* Back + Title */}
         <div className="flex items-center gap-3 mb-6 pt-4">
           <Link href="/lessons">
@@ -139,7 +139,7 @@ export default function LessonPage() {
             </button>
           </Link>
           <span className="text-gray-700">/</span>
-          <h1 className="font-display text-lg font-bold text-white md:text-neon-purple truncate">
+          <h1 className="font-display text-lg font-bold text-neon-purple truncate">
             {theory?.title || "Загрузка..."}
           </h1>
         </div>
