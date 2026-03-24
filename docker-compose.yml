@@ -1,0 +1,80 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: pyneon_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: python_learning
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pyneon_network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pyneon_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/python_learning
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      DEBUG: ${DEBUG:-false}
+      ALLOWED_ORIGINS: '["http://localhost:3000", "http://frontend:3000", "http://144.31.164.246:3000"]'
+      SANDBOX_IMAGE: python:3.11-alpine
+      SANDBOX_TIMEOUT: "10"
+      SANDBOX_MEM_LIMIT: "64m"
+      GPT4FREE_MODEL: gpt-4o-mini
+    volumes:
+      - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker sandbox
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - pyneon_network
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        sleep 3 &&
+        python -c 'from app.core.database import engine; import asyncio; asyncio.run(engine.dispose())' || true &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pyneon_frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - pyneon_network
+
+volumes:
+  postgres_data:
+    name: pyneon_postgres_data
+
+networks:
+  pyneon_network:
+    name: pyneon_network
+    driver: bridge

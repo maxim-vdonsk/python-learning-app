@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --neon-purple: #b026ff;
+    --neon-blue: #00d4ff;
+    --neon-green: #00ff88;
+    --neon-pink: #ff2d78;
+    --cyber-black: #0a0a0f;
+    --cyber-dark: #0d0d1a;
+    --cyber-card: #111128;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--cyber-black);
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--cyber-dark);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--neon-purple);
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: rgba(176, 38, 255, 0.3);
+    color: #fff;
+  }
+}
+
+@layer components {
+  .btn-neon-purple {
+    @apply bg-transparent border border-neon-purple text-neon-purple px-6 py-2 rounded font-mono
+           hover:bg-neon-purple hover:text-cyber-black transition-all duration-200
+           hover:shadow-neon-purple cursor-pointer;
+  }
+
+  .btn-neon-blue {
+    @apply bg-transparent border border-neon-blue text-neon-blue px-6 py-2 rounded font-mono
+           hover:bg-neon-blue hover:text-cyber-black transition-all duration-200
+           hover:shadow-neon-blue cursor-pointer;
+  }
+
+  .btn-solid-purple {
+    @apply bg-neon-purple text-cyber-black px-6 py-2 rounded font-mono font-bold
+           hover:opacity-90 transition-all duration-200 shadow-neon-purple cursor-pointer;
+  }
+
+  .card-cyber {
+    @apply bg-cyber-card border border-cyber-border rounded-lg p-4
+           hover:border-cyber-border-bright transition-all duration-200;
+  }
+
+  .input-cyber {
+    @apply w-full bg-cyber-dark border border-cyber-border rounded px-4 py-2
+           text-gray-200 font-mono placeholder-gray-600
+           focus:outline-none focus:border-neon-purple focus:shadow-neon-purple
+           transition-all duration-200;
+  }
+
+  .text-neon-glow {
+    text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+  }
+
+  .border-neon-glow {
+    box-shadow: 0 0 10px rgba(176, 38, 255, 0.3), inset 0 0 10px rgba(176, 38, 255, 0.05);
+  }
+}
+
+/* Cyberpunk grid background */
+.bg-cyber-grid {
+  background-image:
+    linear-gradient(rgba(176, 38, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(176, 38, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+/* Monaco editor overrides */
+.monaco-editor {
+  border-radius: 8px !important;
+}
+
+/* Neon text styles */
+.neon-purple { color: var(--neon-purple); }
+.neon-blue { color: var(--neon-blue); }
+.neon-green { color: var(--neon-green); }
+.neon-pink { color: var(--neon-pink); }
+
+/* Scanline effect */
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+.scanline::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(transparent, rgba(176, 38, 255, 0.1), transparent);
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+  z-index: 9999;
+}
