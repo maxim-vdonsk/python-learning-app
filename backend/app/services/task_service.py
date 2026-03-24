@@ -11,6 +11,7 @@ from app.repositories.user_repository import UserRepository
 from app.services.ai_service import ai_service
 from app.services.sandbox_service import sandbox_service
 from app.services.achievement_service import AchievementService
+from app.services.progress_service import ProgressService
 
 
 class TaskService:
@@ -21,6 +22,7 @@ class TaskService:
         self.progress_repo = ProgressRepository(db)
         self.user_repo = UserRepository(db)
         self.achievement_service = AchievementService(db)
+        self.progress_service = ProgressService(db)
 
     async def submit_solution(self, user_id: int, task_id: int, code: str) -> dict:
         """
@@ -91,6 +93,9 @@ class TaskService:
             await self.progress_repo.update_task_completion(
                 user_id, task.lesson_id, tasks_done, 1
             )
+
+        # Update daily streak
+        await self.progress_service.update_streak(user_id)
 
         # Check achievements
         new_achievements = await self.achievement_service.check_and_award(user_id)

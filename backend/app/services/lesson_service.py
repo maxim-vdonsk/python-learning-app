@@ -9,6 +9,8 @@ from app.repositories.lesson_repository import LessonRepository
 from app.repositories.progress_repository import ProgressRepository
 from app.repositories.task_repository import TaskRepository
 from app.services.ai_service import ai_service
+from app.services.achievement_service import AchievementService
+from app.services.progress_service import ProgressService
 from app.data.course_structure import COURSE_STRUCTURE
 
 
@@ -22,6 +24,8 @@ class LessonService:
         self.db = db
         self.lesson_repo = LessonRepository(db)
         self.progress_repo = ProgressRepository(db)
+        self.achievement_service = AchievementService(db)
+        self.progress_service = ProgressService(db)
 
     async def get_course(self, user_id: int) -> list:
         """Get full course structure with user progress."""
@@ -85,6 +89,10 @@ class LessonService:
 
         # Mark theory as read
         await self.progress_repo.mark_theory_read(user_id, lesson_id)
+
+        # Update streak and check achievements on theory read
+        await self.progress_service.update_streak(user_id)
+        await self.achievement_service.check_and_award(user_id)
 
         return {
             "lesson_id": lesson.id,
