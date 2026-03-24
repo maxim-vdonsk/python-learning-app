@@ -130,13 +130,19 @@ docker-compose up -d --build
 
 ### 3а. Деплой с доменом (HTTPS автоматически)
 
+Сгенерируй секретный ключ:
+
+```bash
+openssl rand -hex 32
+```
+
 Создай `.env` файл в корне проекта:
 
 ```env
 DOMAIN=yourdomain.com
 NEXT_PUBLIC_API_URL=https://yourdomain.com
 ALLOWED_ORIGINS=["https://yourdomain.com"]
-SECRET_KEY=your-super-secret-key-min-32-chars
+SECRET_KEY=<вывод openssl rand -hex 32>
 ```
 
 Запусти:
