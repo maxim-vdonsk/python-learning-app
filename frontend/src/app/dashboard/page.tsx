@@ -136,23 +136,19 @@ export default function DashboardPage() {
                 height={10}
               />
               <div className="mt-4 flex gap-3">
-                <Link href="/lessons" className="flex-1 block">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    className="w-full btn-neon-purple text-sm flex items-center justify-center gap-2"
-                  >
-                    <BookOpen size={16} />
-                    Продолжить обучение
-                  </motion.button>
+                <Link
+                  href="/lessons"
+                  className="flex-1 btn-neon-purple text-sm flex items-center justify-center gap-2"
+                >
+                  <BookOpen size={16} />
+                  Продолжить обучение
                 </Link>
-                <Link href="/tasks" className="flex-1 block">
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    className="w-full btn-neon-blue text-sm flex items-center justify-center gap-2"
-                  >
-                    <Target size={16} />
-                    Задачи
-                  </motion.button>
+                <Link
+                  href="/tasks"
+                  className="flex-1 btn-neon-blue text-sm flex items-center justify-center gap-2"
+                >
+                  <Target size={16} />
+                  Задачи
                 </Link>
               </div>
             </motion.div>
