@@ -145,10 +145,10 @@ export default function DashboardPage() {
                     Продолжить обучение
                   </motion.button>
                 </Link>
-                <Link href="/tasks">
+                <Link href="/tasks" className="flex-1">
                   <motion.button
                     whileHover={{ scale: 1.02 }}
-                    className="btn-neon-blue text-sm flex items-center gap-2"
+                    className="w-full btn-neon-blue text-sm flex items-center justify-center gap-2"
                   >
                     <Target size={16} />
                     Задачи

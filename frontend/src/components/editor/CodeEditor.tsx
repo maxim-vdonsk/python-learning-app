@@ -89,14 +89,14 @@ export default function CodeEditor({
       </div>
 
       {/* Action bar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-2">
         {/* Submit button */}
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={handleSubmit}
           disabled={loading}
-          className="flex items-center gap-2 px-6 py-2.5 bg-neon-purple text-cyber-black rounded font-mono font-bold text-sm hover:opacity-90 transition-all shadow-neon-purple disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center justify-center gap-2 px-6 py-2.5 bg-neon-purple text-cyber-black rounded font-mono font-bold text-sm hover:opacity-90 transition-all shadow-neon-purple disabled:opacity-50 disabled:cursor-not-allowed sm:flex-none flex-1"
         >
           {loading ? (
             <>
@@ -114,7 +114,7 @@ export default function CodeEditor({
         {/* Reset button */}
         <button
           onClick={handleReset}
-          className="flex items-center gap-2 px-4 py-2.5 border border-cyber-border text-gray-400 rounded font-mono text-sm hover:border-gray-500 hover:text-gray-300 transition-all"
+          className="flex items-center justify-center gap-2 px-4 py-2.5 border border-cyber-border text-gray-400 rounded font-mono text-sm hover:border-gray-500 hover:text-gray-300 transition-all sm:flex-none flex-1"
         >
           <RotateCcw size={14} />
           Сброс
@@ -124,7 +124,7 @@ export default function CodeEditor({
         {hints.length > 0 && (
           <button
             onClick={showNextHint}
-            className="flex items-center gap-2 px-4 py-2.5 border border-yellow-500/40 text-yellow-400 rounded font-mono text-sm hover:border-yellow-500 transition-all ml-auto"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 border border-yellow-500/40 text-yellow-400 rounded font-mono text-sm hover:border-yellow-500 transition-all sm:ml-auto"
           >
             <Lightbulb size={14} />
             Подсказка {currentHint + 1}/{hints.length}
