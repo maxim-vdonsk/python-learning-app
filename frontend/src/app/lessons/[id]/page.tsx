@@ -139,7 +139,7 @@ export default function LessonPage() {
             </button>
           </Link>
           <span className="text-gray-700">/</span>
-          <h1 className="font-display text-lg font-bold text-neon-purple truncate">
+          <h1 className="font-display text-lg font-bold text-white md:text-neon-purple truncate">
             {theory?.title || "Загрузка..."}
           </h1>
         </div>

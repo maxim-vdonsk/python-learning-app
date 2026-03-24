@@ -116,7 +116,7 @@ export default function TasksPage() {
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 pt-20 pb-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="pt-4 mb-6">
-          <h1 className="font-display text-2xl font-bold text-neon-purple mb-1">Задачи</h1>
+          <h1 className="font-display text-2xl font-bold text-white md:text-neon-purple mb-1">Задачи</h1>
           <p className="text-gray-500 text-sm font-mono">Тренируйся на задачах уровня Yandex CodeRun</p>
         </motion.div>
 
