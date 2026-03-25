@@ -17,6 +17,7 @@
 - Monaco Editor в браузере для написания и отправки кода
 - Выполнение кода в изолированном Docker-контейнере
 - Аутентификация через JWT
+- Email-уведомления: приветственное письмо при регистрации, восстановление пароля на почту
 - Система XP, уровней, стриков и достижений
 - Таблица лидеров и личный дашборд прогресса
 
@@ -60,6 +61,7 @@ python-learning-app/
 │   │   ├── services/
 │   │   │   ├── ai_service.py        # Интеграция с gpt4free
 │   │   │   ├── sandbox_service.py   # Выполнение кода в Docker
+│   │   │   ├── email_service.py     # SMTP email (welcome, восстановление пароля)
 │   │   │   ├── lesson_service.py
 │   │   │   ├── task_service.py
 │   │   │   ├── progress_service.py
@@ -183,6 +185,15 @@ SANDBOX_IMAGE=python:3.11-alpine
 SANDBOX_TIMEOUT=10
 SANDBOX_MEM_LIMIT=64m
 GPT4FREE_MODEL=gpt-4o-mini
+
+# SMTP Email (опционально — для welcome-писем и восстановления пароля)
+# Gmail: SMTP_HOST=smtp.gmail.com, SMTP_PORT=465, SMTP_TLS=true
+# Yandex: SMTP_HOST=smtp.yandex.ru, SMTP_PORT=465, SMTP_TLS=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_TLS=true
 ```
 
 ### frontend/.env.local
@@ -221,8 +232,9 @@ gpt4free автоматически выбирает доступного про
 
 ### Авторизация
 ```
-POST /api/v1/auth/register
-POST /api/v1/auth/login/json
+POST /api/v1/auth/register          # Регистрация (welcome email отправляется автоматически)
+POST /api/v1/auth/login/json        # Вход
+POST /api/v1/auth/forgot-password   # Сброс пароля — новый пароль отправляется на email
 ```
 
 ### Уроки
