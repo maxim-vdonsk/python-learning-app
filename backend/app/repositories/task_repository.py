@@ -57,6 +57,17 @@ class TaskRepository:
         result = await self.db.execute(query)
         return result.scalars().all()
 
+    async def update(self, task_id: int, **kwargs) -> Optional[Task]:
+        """Update task fields."""
+        task = await self.get_by_id(task_id)
+        if not task:
+            return None
+        for key, value in kwargs.items():
+            setattr(task, key, value)
+        await self.db.flush()
+        await self.db.refresh(task)
+        return task
+
     async def create(self, **kwargs) -> Task:
         """Create a new task."""
         task = Task(**kwargs)

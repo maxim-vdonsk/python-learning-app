@@ -48,9 +48,8 @@ class SandboxService:
 import sys
 import io
 
-# Redirect stdin if needed
-if {repr(stdin_data)}:
-    sys.stdin = io.StringIO({repr(stdin_data)})
+# Always redirect stdin so input() reads from test data (not real stdin)
+sys.stdin = io.StringIO({repr(stdin_data)})
 
 # User code
 {code}
@@ -66,17 +65,23 @@ if {repr(stdin_data)}:
                     cpu_quota=settings.SANDBOX_CPU_QUOTA,
                     network_disabled=True,
                     read_only=True,
-                    remove=True,
+                    remove=False,  # manual removal after reading logs
                     stdout=True,
                     stderr=True,
                     detach=True,
                 )
-                
-                # Wait for container to finish
-                container.wait()
-                
-                # Get logs
-                return container.logs()
+                try:
+                    # Wait for container to finish
+                    container.wait()
+                    # Get logs before removing
+                    logs = container.logs()
+                finally:
+                    # Always remove the container
+                    try:
+                        container.remove(force=True)
+                    except Exception:
+                        pass
+                return logs
             
             # Execute with timeout
             result = await asyncio.wait_for(
