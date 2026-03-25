@@ -49,7 +49,7 @@ export default function LessonsPage() {
       <div className="max-w-4xl mx-auto px-4 pt-32 md:pt-24 pb-12">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <h1 className="font-display text-2xl font-bold text-neon-purple mb-2">Курс Python</h1>
-          <p className="text-gray-500 text-sm font-mono">12 недель · 48 уроков · от нуля до Yandex CodeRun</p>
+          <p className="text-gray-500 text-sm font-mono">12 недель · 60 тем · 240 уроков · от нуля до Yandex CodeRun</p>
         </motion.div>
 
         <div className="space-y-4">
@@ -72,16 +72,20 @@ export default function LessonsPage() {
                   onClick={() => setOpenWeek(isOpen ? 0 : week.number)}
                   className="w-full flex items-center gap-4 p-2 hover:bg-white/3 rounded transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg border border-cyber-border flex items-center justify-center font-display font-bold text-neon-purple flex-shrink-0">
-                    {week.number}
+                  <div className="w-12 h-12 rounded-lg border border-cyber-border flex flex-col items-center justify-center flex-shrink-0">
+                    <span className="text-[9px] text-gray-500 font-mono leading-none">НЕД.</span>
+                    <span className="font-display font-bold text-neon-purple text-lg leading-none">{week.number}</span>
                   </div>
-                  <div className="flex-1 text-left">
+                  <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-gray-200">{week.title}</span>
                       <span className="text-xs text-gray-600 font-mono">
                         {completedLessons}/{week.lessons.length}
                       </span>
                     </div>
+                    {week.description && (
+                      <p className="text-xs text-gray-500 font-mono truncate">{week.description}</p>
+                    )}
                     <ProgressBar value={weekProgress} color="blue" showValue={false} height={3} animated={false} />
                   </div>
                   <ChevronRight
@@ -90,17 +94,33 @@ export default function LessonsPage() {
                   />
                 </button>
 
-                {/* Lessons */}
+                {/* Lessons grouped by day (4 lessons per day) */}
                 {isOpen && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-2 space-y-2 pl-2"
+                    className="mt-2 pl-2"
                   >
-                    {week.lessons.map((lesson: any, li: number) => (
-                      <LessonCard key={lesson.id} lesson={lesson} index={li} />
-                    ))}
+                    {Array.from({ length: Math.ceil(week.lessons.length / 4) }, (_, dayIdx) => {
+                      const dayLessons = week.lessons.slice(dayIdx * 4, dayIdx * 4 + 4);
+                      const dayCompleted = dayLessons.every((l: any) => l.completed);
+                      return (
+                        <div key={dayIdx} className="mb-3">
+                          <div className="flex items-center gap-2 px-1 mb-1">
+                            <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${dayCompleted ? "text-neon-green border-neon-green/40 bg-neon-green/5" : "text-gray-600 border-gray-700"}`}>
+                              ДЕНЬ {dayIdx + 1}
+                            </span>
+                            <div className="flex-1 h-px bg-gray-800" />
+                          </div>
+                          <div className="space-y-2">
+                            {dayLessons.map((lesson: any, li: number) => (
+                              <LessonCard key={lesson.id} lesson={lesson} index={li} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </motion.div>
                 )}
               </motion.div>
