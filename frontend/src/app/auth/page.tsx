@@ -11,6 +11,9 @@ export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "", username: "" });
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
   const router = useRouter();
   const { setAuth } = useAuthStore();
 
@@ -31,6 +34,21 @@ export default function AuthPage() {
       toast.error(err.response?.data?.detail || "Ошибка авторизации");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      await api.forgotPassword(forgotEmail);
+      toast.success("Если email зарегистрирован — новый пароль отправлен на почту");
+      setShowForgot(false);
+      setForgotEmail("");
+    } catch {
+      toast.error("Ошибка при отправке. Попробуйте позже.");
+    } finally {
+      setForgotLoading(false);
     }
   };
 
@@ -159,8 +177,81 @@ export default function AuthPage() {
                 </>
               )}
             </button>
+
+            {isLogin && (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowForgot(true)}
+                  className="text-xs text-gray-500 hover:text-neon-blue font-mono transition-colors"
+                >
+                  // Забыли пароль?
+                </button>
+              </div>
+            )}
           </form>
         </div>
+
+        {/* Forgot Password Modal */}
+        <AnimatePresence>
+          {showForgot && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+              onClick={(e) => e.target === e.currentTarget && setShowForgot(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="cyber-card rounded-xl p-8 w-full max-w-sm"
+              >
+                <h2 className="text-lg font-display font-bold text-white mb-2">
+                  Восстановление пароля
+                </h2>
+                <p className="text-gray-400 text-xs font-mono mb-6">
+                  // Введите email — новый пароль придёт на почту
+                </p>
+                <form onSubmit={handleForgotPassword} className="space-y-4">
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full bg-cyber-dark border border-cyber-border focus:border-neon-blue text-white pl-10 pr-4 py-3 rounded-lg font-mono text-sm focus:outline-none focus:shadow-neon-blue transition-all"
+                      placeholder="user@matrix.net"
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowForgot(false)}
+                      className="flex-1 py-2 rounded-lg font-mono text-sm text-gray-400 hover:text-white border border-cyber-border hover:border-gray-500 transition-all"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="flex-1 bg-neon-gradient py-2 rounded-lg font-mono text-sm font-bold text-white hover:shadow-neon-purple transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {forgotLoading ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        "ОТПРАВИТЬ"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <p className="text-center text-gray-600 text-xs font-mono mt-6">
           Powered by gpt4free • No paid APIs

@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     GPT4FREE_PROVIDER: str = "auto"  # auto-select best available provider
     GPT4FREE_MODEL: str = "gpt-4o-mini"
 
+    # SMTP Email
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 465
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_NAME: str = "PyNeon Platform"
+    SMTP_TLS: bool = True  # True = SMTP_SSL (465), False = STARTTLS (587)
+
     class Config:
         env_file = ".env"
         case_sensitive = True

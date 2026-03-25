@@ -49,6 +49,10 @@ export const api = {
     const { data } = await apiClient.post("/api/v1/auth/register", { email, username, password });
     return data;
   },
+  forgotPassword: async (email: string) => {
+    const { data } = await apiClient.post("/api/v1/auth/forgot-password", { email });
+    return data;
+  },
 
   // Lessons
   getCourse: async () => {

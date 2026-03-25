@@ -50,6 +50,12 @@ class UserRepository:
             update(User).where(User.id == user_id).values(streak_days=streak)
         )
 
+    async def update_password(self, user_id: int, hashed_password: str) -> None:
+        """Update user's hashed password."""
+        await self.db.execute(
+            update(User).where(User.id == user_id).values(hashed_password=hashed_password)
+        )
+
     async def get_leaderboard(self, limit: int = 10) -> List[User]:
         """Get top users by XP."""
         result = await self.db.execute(
