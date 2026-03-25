@@ -81,6 +81,35 @@ async def generate_task(
     return await service.generate_ai_task(topic, difficulty, lesson_id)
 
 
+@router.post("/{task_id}/regenerate-tests")
+async def regenerate_task_tests(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Regenerate test cases for an existing task using AI."""
+    from fastapi import HTTPException
+    repo = TaskRepository(db)
+    task = await repo.get_by_id(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Задача не найдена")
+
+    from app.services.ai_service import ai_service
+    task_data = await ai_service.generate_task(
+        topic=task.category or "general",
+        difficulty=task.difficulty.value if hasattr(task.difficulty, "value") else str(task.difficulty),
+        lesson_title=task.title,
+    )
+    new_test_cases = task_data.get("test_cases", [])
+    if not new_test_cases:
+        raise HTTPException(status_code=500, detail="AI не смог сгенерировать тест-кейсы")
+
+    import json
+    await repo.update(task_id, test_cases=json.dumps(new_test_cases, ensure_ascii=False))
+    await db.commit()
+    return {"task_id": task_id, "test_cases": new_test_cases}
+
+
 @router.post("/lessons/{lesson_id}/regenerate")
 async def regenerate_lesson_task(
     lesson_id: int,
