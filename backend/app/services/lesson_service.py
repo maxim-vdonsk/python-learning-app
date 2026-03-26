@@ -185,6 +185,45 @@ class LessonService:
             "solution_template": task.solution_template,
         }
 
+    async def sync_course(self) -> dict:
+        """
+        Синхронизирует метаданные уроков из course_structure с БД.
+        Обновляет title, topic, description для каждого урока по slug.
+        Сбрасывает кэш теории и удаляет задания для изменённых уроков,
+        чтобы они сгенерировались заново с правильной темой.
+        """
+        from app.repositories.task_repository import TaskRepository
+
+        task_repo = TaskRepository(self.db)
+        updated = 0
+        skipped = 0
+
+        for week_data in COURSE_STRUCTURE:
+            for lesson_data in week_data["lessons"]:
+                lesson = await self.lesson_repo.get_lesson_by_slug(lesson_data["slug"])
+                if not lesson:
+                    skipped += 1
+                    continue
+
+                changed = (
+                    lesson.title != lesson_data["title"]
+                    or lesson.topic != lesson_data["topic"]
+                    or lesson.description != lesson_data.get("description", "")
+                )
+                if changed:
+                    await self.lesson_repo.update_lesson(
+                        lesson.id,
+                        title=lesson_data["title"],
+                        topic=lesson_data["topic"],
+                        description=lesson_data.get("description", ""),
+                        theory_content=None,
+                        code_examples=None,
+                    )
+                    await task_repo.delete_by_lesson_id(lesson.id)
+                    updated += 1
+
+        return {"updated": updated, "skipped": skipped}
+
     async def initialize_course(self) -> None:
         """Seed the database with the course structure if empty."""
         existing = await self.lesson_repo.get_all_weeks()

@@ -68,6 +68,14 @@ class TaskRepository:
         await self.db.refresh(task)
         return task
 
+    async def delete_by_lesson_id(self, lesson_id: int) -> int:
+        """Delete all tasks for a lesson. Returns count deleted."""
+        from sqlalchemy import delete
+        result = await self.db.execute(
+            delete(Task).where(Task.lesson_id == lesson_id)
+        )
+        return result.rowcount
+
     async def create(self, **kwargs) -> Task:
         """Create a new task."""
         task = Task(**kwargs)
