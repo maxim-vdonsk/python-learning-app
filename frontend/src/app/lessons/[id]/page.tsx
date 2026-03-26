@@ -13,6 +13,7 @@ import CodeEditor from "@/components/editor/CodeEditor";
 import SubmissionResult from "@/components/editor/SubmissionResult";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import { useAuthStore } from "@/lib/store";
 
 type Tab = "theory" | "practice";
 
@@ -35,6 +36,7 @@ function parseHints(hints: unknown): string[] {
 export default function LessonPage() {
   const { id } = useParams();
   const lessonId = Number(id);
+  const { user, updateUser } = useAuthStore();
 
   const [tab, setTab] = useState<Tab>("theory");
   const [theory, setTheory] = useState<{ title: string; theory: string; examples: any[] } | null>(null);
@@ -102,6 +104,9 @@ export default function LessonPage() {
       const res = await api.submitCode(task.id, code);
       setResult(res);
       if (res.is_correct) {
+        if (res.xp_earned && user) {
+          updateUser({ xp_points: user.xp_points + res.xp_earned });
+        }
         toast.success("Правильно! Задача решена!");
       } else {
         toast.error("Не совсем верно. Посмотри на рекомендации AI.");
