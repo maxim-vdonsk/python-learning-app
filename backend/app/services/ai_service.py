@@ -223,25 +223,61 @@ class AIService:
         )
 
         # Блок с ранее изученными темами
+        # Определяем какие конструкции разрешены исходя из пройденных тем
+        allowed_constructs = ["print()", "переменные", "строки", "числа"]
         if prev_topics:
+            topics_str = " ".join(prev_topics)
+            if any(t in topics_str for t in ["variables", "int-float", "str-bool", "type"]):
+                allowed_constructs.append("переменные и типы данных")
+            if any(t in topics_str for t in ["arithmetic", "comparison", "logical", "operator"]):
+                allowed_constructs.append("арифметические и логические операторы")
+            if any(t in topics_str for t in ["io", "input", "fstring", "print"]):
+                allowed_constructs.append("input() и print()")
+            if any(t in topics_str for t in ["if", "elif", "condition", "bool", "ternary", "match"]):
+                allowed_constructs.append("условия if/elif/else")
+            if any(t in topics_str for t in ["while", "for", "loop", "range", "break", "continue"]):
+                allowed_constructs.append("циклы for и while")
+            if any(t in topics_str for t in ["def", "function", "return", "lambda", "args"]):
+                allowed_constructs.append("функции (def, return)")
+            if any(t in topics_str for t in ["string", "str_method", "slicing", "split", "join"]):
+                allowed_constructs.append("методы строк и срезы")
+            if any(t in topics_str for t in ["list", "listcomp", "append", "sort"]):
+                allowed_constructs.append("списки и list comprehension")
+            if any(t in topics_str for t in ["dict", "set", "tuple"]):
+                allowed_constructs.append("словари, множества, кортежи")
+            if any(t in topics_str for t in ["exception", "try", "except", "raise"]):
+                allowed_constructs.append("try/except")
+            if any(t in topics_str for t in ["class", "oop", "inherit", "object"]):
+                allowed_constructs.append("классы и ООП")
+
             prev_block = (
                 "\nУченик уже изучил ТОЛЬКО эти темы (и ничего больше):\n"
                 + "\n".join(f"  - {t}" for t in prev_topics[-10:])
                 + "\n"
             )
             forbidden_block = (
-                "\nСТРОГО ЗАПРЕЩЕНО использовать в задаче:\n"
-                "  - классы, ООП (class, self, __init__)\n"
-                "  - исключения (try/except), если они не в пройденных темах\n"
-                "  - импорт модулей (import), если он не в пройденных темах\n"
-                "  - декораторы, генераторы, async/await\n"
-                "  - любые концепции, которых НЕТ в списке пройденных тем выше\n"
+                "\nРАЗРЕШЕНО использовать в задаче ТОЛЬКО:\n"
+                + "\n".join(f"  ✓ {c}" for c in allowed_constructs)
+                + "\n\nКАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО (даже если кажется уместным):\n"
+                + ("  ✗ if/elif/else — ученик ещё не проходил условия\n" if "условия if/elif/else" not in allowed_constructs else "")
+                + ("  ✗ циклы for/while — ученик ещё не проходил циклы\n" if "циклы for и while" not in allowed_constructs else "")
+                + ("  ✗ функции def — ученик ещё не проходил функции\n" if "функции (def, return)" not in allowed_constructs else "")
+                + ("  ✗ списки [] — ученик ещё не проходил списки\n" if "списки и list comprehension" not in allowed_constructs else "")
+                + ("  ✗ словари {} — ученик ещё не проходил словари\n" if "словари, множества, кортежи" not in allowed_constructs else "")
+                + ("  ✗ try/except — ученик ещё не проходил исключения\n" if "try/except" not in allowed_constructs else "")
+                + "  ✗ классы, ООП, декораторы, генераторы, async/await — не пройдены\n"
+                + "  ✗ импорт модулей (import), если он не в пройденных темах\n"
             )
         else:
             prev_block = "\nУченик только начинает — это самый первый урок.\n"
+            allowed_constructs = ["print()", "строковые литералы"]
             forbidden_block = (
-                "\nСТРОГО ЗАПРЕЩЕНО использовать в задаче:\n"
-                "  - всё, кроме базового вывода и простейших операций текущей темы\n"
+                "\nРАЗРЕШЕНО использовать ТОЛЬКО:\n"
+                "  ✓ print() для вывода текста\n"
+                "  ✓ строковые литералы в кавычках\n"
+                "\nКАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:\n"
+                "  ✗ if/elif/else, циклы, функции, переменные (ещё не пройдены)\n"
+                "  ✗ input(), списки, словари, классы и всё остальное\n"
             )
 
         prompt = f"""Создай задачу по Python для новичка.
