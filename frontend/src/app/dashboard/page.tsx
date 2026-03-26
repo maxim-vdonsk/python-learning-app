@@ -25,7 +25,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [achievements, setAchievements] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -42,6 +42,7 @@ export default function DashboardPage() {
         setStats(statsData);
         setAchievements(achData);
         setLeaderboard(lbData);
+        updateUser({ xp_points: statsData.total_xp, level: statsData.level });
       } catch {
         toast.error("Не удалось загрузить данные");
       } finally {
