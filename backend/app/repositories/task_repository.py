@@ -68,11 +68,12 @@ class TaskRepository:
         await self.db.refresh(task)
         return task
 
-    async def delete_by_lesson_id(self, lesson_id: int) -> int:
-        """Delete all tasks for a lesson. Returns count deleted."""
-        from sqlalchemy import delete
+    async def unlink_from_lesson(self, lesson_id: int) -> int:
+        """Unlink tasks from a lesson (set lesson_id=NULL) so a new task is generated.
+        Preserves existing submissions history."""
+        from sqlalchemy import update
         result = await self.db.execute(
-            delete(Task).where(Task.lesson_id == lesson_id)
+            update(Task).where(Task.lesson_id == lesson_id).values(lesson_id=None)
         )
         return result.rowcount
 
