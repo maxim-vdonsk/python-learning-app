@@ -70,6 +70,14 @@ class LessonRepository:
                 topics.append(f"{topic} ({title})")
         return topics
 
+    async def update_lesson(self, lesson_id: int, **kwargs) -> None:
+        """Update lesson metadata (title, topic, description, etc.)."""
+        lesson = await self.get_lesson_by_id(lesson_id)
+        if lesson:
+            for key, value in kwargs.items():
+                setattr(lesson, key, value)
+            await self.db.flush()
+
     async def update_theory(self, lesson_id: int, theory: str, examples: str) -> None:
         """Update lesson theory content."""
         lesson = await self.get_lesson_by_id(lesson_id)

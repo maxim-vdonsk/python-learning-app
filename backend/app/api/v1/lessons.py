@@ -87,3 +87,11 @@ async def initialize_course(db: AsyncSession = Depends(get_db)):
     service = LessonService(db)
     await service.initialize_course()
     return {"message": "Course initialized successfully"}
+
+
+@router.post("/sync")
+async def sync_course(db: AsyncSession = Depends(get_db)):
+    """Sync lesson metadata from course_structure. Clears theory/task cache for changed lessons."""
+    service = LessonService(db)
+    result = await service.sync_course()
+    return {"message": "Course synced", **result}

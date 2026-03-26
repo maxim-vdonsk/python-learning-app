@@ -14,14 +14,14 @@ COURSE_STRUCTURE = [
         "description": "Установка окружения, первые программы, переменные, операторы и ввод/вывод",
         "lessons": [
             # День 1: Введение
-            {"title": "Что такое Python и зачем он нужен", "slug": "what-is-python", "topic": "introduction", "order": 1,
-             "description": "История Python, области применения, почему Python популярен"},
-            {"title": "Установка Python и VS Code", "slug": "install-python", "topic": "introduction", "order": 2,
-             "description": "Установка интерпретатора, настройка редактора, первый запуск"},
-            {"title": "REPL и запуск скриптов", "slug": "repl-scripts", "topic": "introduction", "order": 3,
-             "description": "Интерактивный режим REPL, написание и запуск .py файлов"},
-            {"title": "Hello, World! и структура программы", "slug": "hello-world", "topic": "introduction", "order": 4,
-             "description": "Первая программа, комментарии, структура кода"},
+            {"title": "Что такое Python и зачем он нужен", "slug": "what-is-python", "topic": "python_intro", "order": 1,
+             "description": "История Python, области применения, почему Python популярен среди новичков и профессионалов"},
+            {"title": "Первая программа: вывод текста через print()", "slug": "install-python", "topic": "print_basics", "order": 2,
+             "description": "Функция print(), вывод строк и чисел, несколько значений через запятую, строки в кавычках"},
+            {"title": "Как Python выполняет код: интерпретатор и ошибки", "slug": "repl-scripts", "topic": "python_execution", "order": 3,
+             "description": "Построчное выполнение, что такое интерпретатор, как читать сообщения об ошибках"},
+            {"title": "Hello, World! и комментарии в коде", "slug": "hello-world", "topic": "hello_world", "order": 4,
+             "description": "Первая программа, однострочные и многострочные комментарии, зачем они нужны"},
             # День 2: Переменные
             {"title": "Что такое переменная", "slug": "variables-intro", "topic": "variables", "order": 5,
              "description": "Понятие переменной, именование, оператор присваивания"},
