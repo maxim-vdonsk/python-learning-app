@@ -219,7 +219,7 @@ class LessonService:
                         theory_content=None,
                         code_examples=None,
                     )
-                    await task_repo.delete_by_lesson_id(lesson.id)
+                    await task_repo.unlink_from_lesson(lesson.id)
                     updated += 1
 
         return {"updated": updated, "skipped": skipped}
