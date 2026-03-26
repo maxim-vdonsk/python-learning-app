@@ -119,7 +119,7 @@ export const api = {
     return data;
   },
   getLeaderboard: async () => {
-    const { data } = await apiClient.get("/api/v1/progress/leaderboard");
+    const { data } = await apiClient.get("/api/v1/progress/leaderboard?limit=6");
     return data;
   },
 
