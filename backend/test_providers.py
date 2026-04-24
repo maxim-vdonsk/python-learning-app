@@ -1,15 +1,15 @@
 """
 Тест ВСЕХ провайдеров gpt4free.
-Список берётся динамически из установленной библиотеки g4f.
-Каждый провайдер проверяется 3 раза с реальным JSON-запросом.
+Сканирует папку g4f/Provider/ напрямую — находит все провайдеры независимо от версии.
+Каждый провайдер тестируется 3 раза с реальным JSON-запросом.
 """
 import asyncio
+import importlib
+import inspect
 import json
+import os
 import re
 import time
-import g4f
-import g4f.Provider
-from g4f.client import AsyncClient
 
 SYSTEM = (
     "Ты преподаватель Python. "
@@ -24,50 +24,97 @@ PROMPT = (
 ATTEMPTS = 3
 TIMEOUT = 25
 
+SKIP = {
+    'BaseProvider', 'AsyncProvider', 'AbstractProvider',
+    'AsyncGeneratorProvider', 'ProviderModelMixin', 'IterListProvider',
+    'RaiseErrorProvider', 'NeedAuthProvider', 'CreateImagesProvider',
+    'RetryProvider', 'Local', 'Reka', 'BaseRetryProvider',
+}
 
-def is_valid_json_response(text: str) -> bool:
+
+def is_valid_json(text: str) -> bool:
     if not text or len(text) < 10:
         return False
     fence = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
     candidate = fence.group(1) if fence else text
-    start = candidate.find('{')
-    end = candidate.rfind('}') + 1
-    if start == -1 or end <= start:
+    s = candidate.find('{')
+    e = candidate.rfind('}') + 1
+    if s == -1 or e <= s:
         return False
     try:
-        data = json.loads(candidate[start:end])
-        return "theory" in data and len(data.get("theory", "")) > 20
+        d = json.loads(candidate[s:e])
+        return "theory" in d and len(d.get("theory", "")) > 20
     except Exception:
         return False
 
 
-def is_junk(text: str) -> str | None:
-    """Возвращает причину если ответ — мусор, иначе None."""
+def is_junk(text: str):
     if not text:
         return "пустой ответ"
     tl = text.lower()
-    if tl.startswith("<!doctype") or tl.startswith("<html"):
-        return "HTML вместо ответа"
+    if tl.startswith("<!") or tl.startswith("<html"):
+        return "HTML"
     if "log in" in tl[:80] or "sign in" in tl[:80]:
         return "редирект на логин"
-    if text.startswith("data:") or text.startswith("[AI"):
+    if text.startswith("data:") or "[AI недоступен]" in text:
         return "ошибка провайдера"
-    if len(text) < 5:
-        return f"слишком короткий: {text!r}"
     return None
 
 
-async def test_provider(provider) -> dict:
-    name = provider.__name__ if hasattr(provider, '__name__') else str(provider)
+def discover_providers():
+    """Сканирует файловую систему g4f и возвращает все классы провайдеров."""
+    import g4f
+    g4f_path = os.path.dirname(g4f.__file__)
+    provider_dir = os.path.join(g4f_path, 'Provider')
+
+    if not os.path.isdir(provider_dir):
+        print(f"Папка провайдеров не найдена: {provider_dir}")
+        return []
+
+    providers = []
+    seen = set()
+
+    for root, dirs, files in os.walk(provider_dir):
+        dirs[:] = [d for d in dirs if d != '__pycache__']
+
+        for fname in files:
+            if not fname.endswith('.py') or fname.startswith('_'):
+                continue
+
+            rel = os.path.relpath(os.path.join(root, fname), g4f_path)
+            module_path = 'g4f.' + rel.replace(os.sep, '.')[:-3]
+
+            try:
+                mod = importlib.import_module(module_path)
+            except Exception:
+                continue
+
+            for name, obj in inspect.getmembers(mod, inspect.isclass):
+                if name in SKIP or name in seen:
+                    continue
+                if not (hasattr(obj, 'supports_gpt_4') or
+                        hasattr(obj, 'models') or
+                        hasattr(obj, 'create_async') or
+                        hasattr(obj, 'create_completion')):
+                    continue
+                seen.add(name)
+                providers.append((name, obj))
+
+    return sorted(providers, key=lambda x: x[0])
+
+
+async def test_one(name: str, provider) -> dict:
     ok = 0
     errors = []
 
     for attempt in range(1, ATTEMPTS + 1):
         try:
-            client = AsyncClient(provider=provider)
+            from g4f.client import AsyncClient
+            client = AsyncClient()
             resp = await asyncio.wait_for(
                 client.chat.completions.create(
                     model="gpt-4o-mini",
+                    provider=provider,
                     messages=[
                         {"role": "system", "content": SYSTEM},
                         {"role": "user",   "content": PROMPT},
@@ -81,17 +128,17 @@ async def test_provider(provider) -> dict:
             if junk:
                 errors.append(f"#{attempt}: {junk}")
                 continue
-
-            if not is_valid_json_response(text):
-                errors.append(f"#{attempt}: не JSON ({text[:70]}...)")
+            if not is_valid_json(text):
+                snippet = text[:80].replace('\n', ' ')
+                errors.append(f"#{attempt}: не JSON — {snippet}")
                 continue
 
             ok += 1
 
         except asyncio.TimeoutError:
             errors.append(f"#{attempt}: таймаут {TIMEOUT}с")
-        except Exception as e:
-            errors.append(f"#{attempt}: {str(e)[:100]}")
+        except Exception as ex:
+            errors.append(f"#{attempt}: {str(ex)[:100]}")
 
         if attempt < ATTEMPTS:
             await asyncio.sleep(2)
@@ -99,43 +146,20 @@ async def test_provider(provider) -> dict:
     return {"name": name, "ok": ok, "errors": errors}
 
 
-def get_all_providers():
-    """Получить все провайдеры из g4f динамически."""
-    providers = []
-    for name in dir(g4f.Provider):
-        if name.startswith("_"):
-            continue
-        obj = getattr(g4f.Provider, name)
-        # Берём только классы-провайдеры
-        try:
-            if (isinstance(obj, type)
-                    and hasattr(obj, 'create_completion')
-                    and name not in ('BaseProvider', 'AsyncProvider', 'AbstractProvider',
-                                     'AsyncGeneratorProvider', 'ProviderModelMixin',
-                                     'RaiseErrorProvider', 'NeedAuthProvider')):
-                providers.append(obj)
-        except Exception:
-            pass
-    return providers
-
-
 async def main():
-    providers = get_all_providers()
+    providers = discover_providers()
     print(f"Найдено провайдеров в g4f: {len(providers)}")
-    print(f"Тестируем каждый по {ATTEMPTS} попытки с реальным JSON-запросом\n")
-    print(f"{'Провайдер':<30} {'OK':>4} {'Fail':>6}  Статус")
-    print("-" * 70)
+    print(f"Каждый тестируется {ATTEMPTS} раза с реальным JSON-запросом\n")
+    print(f"{'Провайдер':<30} {'OK':>4} {'Fail':>5}  Статус")
+    print("-" * 72)
 
     reliable = []
     unstable = []
 
-    for provider in providers:
-        name = provider.__name__ if hasattr(provider, '__name__') else str(provider)
+    for name, provider in providers:
         print(f"  {name:<28} ...", end="", flush=True)
         t0 = time.time()
-
-        result = await test_provider(provider)
-
+        result = await test_one(name, provider)
         elapsed = time.time() - t0
         ok = result["ok"]
         fail = ATTEMPTS - ok
@@ -149,7 +173,7 @@ async def main():
         else:
             status = "✗ не работает"
 
-        print(f"\r  {name:<28} {ok:>4} {fail:>6}  {status}  ({elapsed:.0f}с)")
+        print(f"\r  {name:<28} {ok:>4} {fail:>5}  {status}  ({elapsed:.0f}с)")
 
         if result["errors"] and ok < ATTEMPTS:
             for e in result["errors"][:2]:
@@ -157,22 +181,18 @@ async def main():
 
         await asyncio.sleep(1)
 
-    print("\n" + "=" * 70)
-    print(f"\nНАДЁЖНЫЕ — прошли {ATTEMPTS}/{ATTEMPTS} ({len(reliable)} шт):")
+    print("\n" + "=" * 72)
+    print(f"\n✓ НАДЁЖНЫЕ ({len(reliable)} шт):")
     for r in reliable:
-        print(f"  ✓ {r}")
+        print(f"  {r}")
 
-    print(f"\nНЕСТАБИЛЬНЫЕ — прошли частично ({len(unstable)} шт):")
-    for name, ok in sorted(unstable, key=lambda x: -x[1]):
-        print(f"  ~ {name}  {ok}/{ATTEMPTS}")
+    print(f"\n~ НЕСТАБИЛЬНЫЕ ({len(unstable)} шт):")
+    for n, ok in sorted(unstable, key=lambda x: -x[1]):
+        print(f"  {n}  ({ok}/{ATTEMPTS})")
 
-    print("\nИТОГ для PROVIDER_CHAIN в ai_service.py:")
-    best = reliable + [name for name, _ in unstable]
-    if best:
-        for b in best:
-            print(f'    ("{b}", "gpt-4o-mini"),')
-    else:
-        print("  Ни один провайдер не прошёл тест — попробуй позже")
+    print("\n--- Вставь в PROVIDER_CHAIN в ai_service.py ---")
+    for b in reliable + [n for n, _ in unstable]:
+        print(f'    ("{b}", "gpt-4o-mini"),')
 
 
 if __name__ == "__main__":
