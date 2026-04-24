@@ -102,10 +102,18 @@ class LessonService:
         await self.progress_service.update_streak(user_id)
         await self.achievement_service.check_and_award(user_id)
 
+        theory_text = lesson.theory_content
+        if not theory_text or _is_ai_error(theory_text):
+            theory_text = (
+                f"## Теория временно недоступна\n\n"
+                f"AI не смог сгенерировать теорию по теме «{lesson.title}».\n\n"
+                "Нажмите кнопку **Обновить** через несколько секунд — это запустит повторную генерацию."
+            )
+
         return {
             "lesson_id": lesson.id,
             "title": lesson.title,
-            "theory": lesson.theory_content,
+            "theory": theory_text,
             "examples": json.loads(lesson.code_examples) if lesson.code_examples else [],
         }
 

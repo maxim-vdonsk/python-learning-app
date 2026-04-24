@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 # Только проверенные рабочие провайдеры, строками (lazy resolve)
 # Обновленный список - Free2GPT больше не работает (возвращает HTML)
 PROVIDER_CHAIN = [
+    ("DDG", "gpt-4o-mini"),
     ("Yqcloud", "gpt-4o-mini"),
     ("OperaAria", "gpt-4o-mini"),
 ]
