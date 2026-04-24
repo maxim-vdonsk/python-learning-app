@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 # Только проверенные рабочие провайдеры, строками (lazy resolve)
 # Обновленный список - Free2GPT больше не работает (возвращает HTML)
 PROVIDER_CHAIN = [
-    ("DDG", "gpt-4o-mini"),
-    ("Yqcloud", "gpt-4o-mini"),
-    ("OperaAria", "gpt-4o-mini"),
+    ("Yqcloud",     "gpt-4o-mini"),
+    ("ApiAirforce", "gpt-4o-mini"),
+    ("OperaAria",   "gpt-4o-mini"),
 ]
 
 # Статичные мотивационные фразы — fallback когда AI недоступен
@@ -432,7 +432,8 @@ class AIService:
     def _parse_json(self, text: str, fallback: dict) -> dict:
         """Извлекает первый валидный JSON-объект из текста."""
         import re
-        # Убираем markdown-обёртки ```json ... ``` или ``` ... ```
+
+        # 1. ```json ... ``` с закрывающими тройными кавычками
         fence = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
         if fence:
             try:
@@ -440,6 +441,19 @@ class AIService:
             except json.JSONDecodeError:
                 pass
 
+        # 2. ```json ... без закрывающих ``` (OperaAria иногда обрывает)
+        fence_open = re.search(r'```(?:json)?\s*(\{.*)', text, re.DOTALL)
+        if fence_open:
+            candidate = fence_open.group(1).rstrip('`').strip()
+            s = candidate.find('{')
+            e = candidate.rfind('}') + 1
+            if s != -1 and e > s:
+                try:
+                    return json.loads(candidate[s:e])
+                except json.JSONDecodeError:
+                    pass
+
+        # 3. Голый JSON в тексте
         start = text.find('{')
         end   = text.rfind('}') + 1
         if start != -1 and end > start:
@@ -447,6 +461,7 @@ class AIService:
                 return json.loads(text[start:end])
             except json.JSONDecodeError:
                 pass
+
         return fallback
 
 
