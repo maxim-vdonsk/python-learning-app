@@ -15,14 +15,14 @@ from app.data.course_structure import COURSE_STRUCTURE
 
 
 def _is_ai_error(text: str) -> bool:
-    """Возвращает True если текст — сообщение об ошибке AI или сырой JSON вместо markdown."""
+    """Возвращает True если текст — ошибка AI, сырой JSON или разговорный ответ вместо markdown."""
     if not text:
         return True
     if text.startswith("[AI недоступен]"):
         return True
-    # Теория случайно сохранилась как сырой JSON — форсируем регенерацию
     stripped = text.strip()
-    if stripped.startswith("{") and stripped.endswith("}") and '"theory"' in stripped:
+    # Сырой JSON сохранился вместо markdown ({"theory": ...} или Привет! ... {"theory": ...})
+    if '"theory"' in stripped and '"examples"' in stripped:
         return True
     return False
 
