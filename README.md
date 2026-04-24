@@ -119,7 +119,7 @@ cp frontend/.env.local.example frontend/.env.local
 ### 3. Локальный запуск (без домена)
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 Подождите ~30 секунд, затем откройте:
@@ -150,7 +150,7 @@ SECRET_KEY=<вывод openssl rand -hex 32>
 Запусти:
 
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 Caddy автоматически получит SSL-сертификат через Let's Encrypt. Сайт будет доступен по `https://yourdomain.com`.
@@ -167,7 +167,7 @@ curl -X POST http://localhost:8000/api/v1/achievements/seed
 ### 5. Режим разработки (hot-reload)
 
 ```bash
-docker-compose -f docker-compose.dev.yml up
+docker compose -f docker-compose.dev.yml up
 ```
 
 ---
@@ -290,19 +290,19 @@ POST /api/v1/achievements/seed
 
 ```bash
 # Запуск
-docker-compose up -d
+docker compose up -d
 
 # Остановка
-docker-compose down
+docker compose down
 
 # Пересборка
-docker-compose up -d --build
+docker compose up -d --build
 
 # Логи
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Сброс базы данных
-docker-compose down -v && docker-compose up -d
+docker compose down -v && docker compose up -d
 ```
 
 ---
@@ -317,9 +317,9 @@ volumes:
   - /var/run/docker.sock:/var/run/docker.sock
 ```
 
-**Ошибка подключения к базе данных** — проверьте `docker-compose logs db`, затем перезапустите бэкенд:
+**Ошибка подключения к базе данных** — проверьте `docker compose logs db`, затем перезапустите бэкенд:
 ```bash
-docker-compose restart backend
+docker compose restart backend
 ```
 
 **HTTPS не работает** — убедитесь, что:
@@ -329,7 +329,7 @@ docker-compose restart backend
 
 Логи Caddy:
 ```bash
-docker-compose logs caddy
+docker compose logs caddy
 ```
 
 ---
