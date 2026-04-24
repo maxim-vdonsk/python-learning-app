@@ -97,8 +97,15 @@ python-learning-app/
 
 ### Требования
 
-- Docker 24+
-- Docker Compose 2.x
+- Ubuntu / Debian сервер (или локальная машина с Docker)
+
+### 0. Установка Docker (если не установлен)
+
+```bash
+curl -fsSL https://get.docker.com | sh
+```
+
+Эта команда устанавливает Docker и Compose плагин автоматически. После установки продолжай с шага 1.
 
 ### 1. Клонирование
 
