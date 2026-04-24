@@ -58,12 +58,26 @@ async def ensure_database_exists(retries: int = 10, delay: float = 2.0) -> None:
     raise RuntimeError("PostgreSQL недоступен после всех попыток подключения.")
 
 
+async def warmup_sandbox_image() -> None:
+    """Pull sandbox Docker image at startup so first submission doesn't timeout."""
+    import docker
+    from docker.errors import DockerException
+    try:
+        client = docker.from_env()
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, lambda: client.images.pull(settings.SANDBOX_IMAGE))
+        logger.info(f"Sandbox image ready: {settings.SANDBOX_IMAGE}")
+    except DockerException as e:
+        logger.warning(f"Не удалось прогреть sandbox-образ: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan: ensure DB exists, then create tables."""
+    """Application lifespan: ensure DB exists, create tables, warmup sandbox."""
     await ensure_database_exists()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await warmup_sandbox_image()
     yield
 
 

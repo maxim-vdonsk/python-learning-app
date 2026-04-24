@@ -427,6 +427,15 @@ class AIService:
 
     def _parse_json(self, text: str, fallback: dict) -> dict:
         """Извлекает первый валидный JSON-объект из текста."""
+        import re
+        # Убираем markdown-обёртки ```json ... ``` или ``` ... ```
+        fence = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+        if fence:
+            try:
+                return json.loads(fence.group(1))
+            except json.JSONDecodeError:
+                pass
+
         start = text.find('{')
         end   = text.rfind('}') + 1
         if start != -1 and end > start:
