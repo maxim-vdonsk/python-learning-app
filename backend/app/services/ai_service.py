@@ -208,7 +208,8 @@ class AIService:
 
     async def generate_task(self, topic: str, difficulty: str,
                             lesson_title: str,
-                            prev_topics: list[str] | None = None) -> dict:
+                            prev_topics: list[str] | None = None,
+                            used_titles: list[str] | None = None) -> dict:
         """
         Генерирует задачу по теме и сложности.
 
@@ -284,11 +285,21 @@ class AIService:
                 "  ✗ input(), списки, словари, классы и всё остальное\n"
             )
 
+        # Блок запрета повторений
+        if used_titles:
+            used_titles_block = (
+                "\nУЖЕ СУЩЕСТВУЮЩИЕ ЗАДАЧИ — ЗАПРЕЩЕНО создавать похожие (другое название, другой сценарий):\n"
+                + "".join(f"  ✗ «{t}»\n" for t in used_titles)
+                + "Придумай СОВЕРШЕННО ДРУГОЙ сценарий, не связанный с приветствиями или уже перечисленными выше.\n"
+            )
+        else:
+            used_titles_block = ""
+
         prompt = f"""Создай задачу по Python для новичка.
 
 ТЕКУЩАЯ ТЕМА УРОКА: «{lesson_title}» (topic: {topic})
 СЛОЖНОСТЬ: {difficulty} ({hints_map.get(difficulty, '')})
-{prev_block}{forbidden_block}
+{prev_block}{forbidden_block}{used_titles_block}
 ТРЕБОВАНИЯ:
 - Задача проверяет ТОЛЬКО тему «{lesson_title}» — ничего сложнее
 - Решение должно умещаться в знания из пройденных тем + текущей темы

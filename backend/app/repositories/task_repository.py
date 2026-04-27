@@ -77,6 +77,11 @@ class TaskRepository:
         )
         return result.rowcount
 
+    async def get_all_titles(self) -> list[str]:
+        """Возвращает названия всех задач в БД (для проверки уникальности)."""
+        result = await self.db.execute(select(Task.title))
+        return [row[0] for row in result.all() if row[0]]
+
     async def create(self, **kwargs) -> Task:
         """Create a new task."""
         task = Task(**kwargs)

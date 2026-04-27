@@ -148,9 +148,14 @@ class LessonService:
         # Получаем список уже пройденных тем для контекста
         prev_topics = await self.lesson_repo.get_previous_topics(lesson_id)
 
-        # Генерируем задание с учётом пройденного материала
+        # Собираем все уже существующие названия задач — чтобы AI не повторял
+        all_used_titles = await task_repo.get_all_titles()
+
+        # Генерируем задание с учётом пройденного материала и запретом повторений
         task_data = await ai_service.generate_task(
-            lesson.topic, "easy", lesson.title, prev_topics=prev_topics
+            lesson.topic, "easy", lesson.title,
+            prev_topics=prev_topics,
+            used_titles=all_used_titles if all_used_titles else None,
         )
 
         # Если AI вернул ошибку — возвращаем заглушку без сохранения в БД
