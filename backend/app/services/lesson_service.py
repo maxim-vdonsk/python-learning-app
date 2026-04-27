@@ -162,6 +162,16 @@ class LessonService:
             theory_content=lesson.theory_content or None,
         )
 
+        # Принудительно зачищаем solution_template для обычных уроков —
+        # AI игнорирует инструкцию и вставляет готовое решение
+        error_keywords = ["error", "ошибк", "debug", "traceback",
+                          "исключени", "execution", "интерпретатор", "синтаксис"]
+        is_error_lesson = any(
+            kw in (lesson.topic + lesson.title).lower() for kw in error_keywords
+        )
+        if not is_error_lesson:
+            task_data["solution_template"] = "# Напишите решение здесь\n"
+
         # Если AI вернул ошибку — возвращаем заглушку без сохранения в БД
         if _is_ai_error(task_data.get("description", "")):
             return {
