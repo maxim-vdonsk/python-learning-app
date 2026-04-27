@@ -286,6 +286,27 @@ class AIService:
                 "  ✗ input(), списки, словари, классы и всё остальное\n"
             )
 
+        # Определяем тип задачи: обычная или «найди и исправь ошибку»
+        error_keywords = ["error", "ошибк", "debug", "traceback", "исключени",
+                          "execution", "интерпретатор", "синтаксис"]
+        is_error_lesson = any(kw in (topic + lesson_title).lower() for kw in error_keywords)
+
+        if is_error_lesson:
+            task_type_block = (
+                "\nТИП ЗАДАЧИ: «Найди и исправь ошибку»\n"
+                "- В поле solution_template дай СЛОМАННЫЙ код с одной намеренной ошибкой\n"
+                "  (SyntaxError, NameError, TypeError или логическая ошибка)\n"
+                "- В description объясни что программа ДОЛЖНА делать (не как исправить)\n"
+                "- test_cases проверяют УЖЕ ИСПРАВЛЕННЫЙ правильный код\n"
+                "- В hints дай подсказку какой тип ошибки допущен, но не говори где именно\n"
+            )
+        else:
+            task_type_block = (
+                "\nТИП ЗАДАЧИ: обычная — студент пишет код с нуля\n"
+                "- solution_template содержит ТОЛЬКО пустой шаблон: # Напишите решение здесь\n"
+                "  ЗАПРЕЩЕНО вставлять в solution_template готовый код или подсказки в виде кода\n"
+            )
+
         # Блок с содержанием теории урока
         if theory_content:
             # Берём первые 1200 символов, убираем markdown-символы для экономии токенов
@@ -317,7 +338,7 @@ class AIService:
 
 ТЕКУЩАЯ ТЕМА УРОКА: «{lesson_title}» (topic: {topic})
 СЛОЖНОСТЬ: {difficulty} ({hints_map.get(difficulty, '')})
-{prev_block}{forbidden_block}{used_titles_block}{theory_block}
+{prev_block}{forbidden_block}{used_titles_block}{theory_block}{task_type_block}
 ТРЕБОВАНИЯ:
 - Задача проверяет ТОЛЬКО тему «{lesson_title}» — ничего сложнее
 - Решение должно умещаться в знания из пройденных тем + текущей темы
@@ -342,7 +363,7 @@ class AIService:
     {{"input": "ввод", "expected_output": "вывод"}},
     {{"input": "ввод2", "expected_output": "вывод2"}}
   ],
-  "solution_template": "# Напишите решение здесь\\n",
+  "solution_template": "ТОЛЬКО для обычных задач: # Напишите решение здесь\\n | для задач на ошибку: сломанный код с одной ошибкой",
   "category": "{topic}"
 }}"""
 
