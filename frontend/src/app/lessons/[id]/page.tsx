@@ -267,6 +267,12 @@ export default function LessonPage() {
                     AI создаёт задачу по этой теме...
                   </div>
                 </div>
+              ) : task?.no_task ? (
+                <div className="card-cyber text-center py-16 border-neon-blue/10">
+                  <div className="text-4xl mb-4">📖</div>
+                  <p className="text-gray-300 font-mono text-lg mb-2">Этот урок только теоретический</p>
+                  <p className="text-gray-500 font-mono text-sm">Изучи теорию на вкладке выше и переходи к следующему уроку</p>
+                </div>
               ) : task ? (
                 <>
                   {/* Task description */}

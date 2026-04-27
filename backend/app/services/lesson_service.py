@@ -14,6 +14,132 @@ from app.services.progress_service import ProgressService
 from app.data.course_structure import COURSE_STRUCTURE
 
 
+def _safe_fallback_task(topic: str, lesson_title: str) -> dict:
+    """Гарантированно корректная задача когда AI нарушает ограничения.
+    Ключ — название урока, чтобы разные уроки одного топика не получали одну задачу.
+    """
+    BY_TITLE = {
+        # --- python_intro ---
+        "Что такое Python и зачем он нужен": {
+            "title": "Твоя первая программа",
+            "description": "Выведи на экран фразу: Python это круто!\n\nПример вывода:\nPython это круто!",
+            "test_cases": [{"input": "", "expected_output": "Python это круто!"}],
+            "hints": ["Используй функцию print()"],
+        },
+        # --- print_basics ---
+        "Первая программа: вывод текста через print()": {
+            "title": "Три строки текста",
+            "description": "Напишите программу, которая выводит три строки:\nСтрока 1\nСтрока 2\nСтрока 3\n\nПример вывода:\nСтрока 1\nСтрока 2\nСтрока 3",
+            "test_cases": [{"input": "", "expected_output": "Строка 1\nСтрока 2\nСтрока 3"}],
+            "hints": ["Вызови print() три раза"],
+        },
+        # --- python_execution ---
+        "Как Python выполняет код: интерпретатор и ошибки": {
+            "title": "Найди синтаксическую ошибку",
+            "description": "В программе допущена ошибка. Найди и исправь её, чтобы программа вывела: Привет, мир!",
+            "test_cases": [{"input": "", "expected_output": "Привет, мир!"}],
+            "hints": ["Посмотри внимательно на скобки"],
+        },
+        # --- hello_world ---
+        "Hello, World! и комментарии в коде": {
+            "title": "Hello, World! с комментарием",
+            "description": "Напишите программу, которая выводит фразу Hello, World!\nДобавь к коду комментарий, объясняющий что делает программа.\n\nПример вывода:\nHello, World!",
+            "test_cases": [{"input": "", "expected_output": "Hello, World!"}],
+            "hints": ["Комментарий начинается с символа #"],
+        },
+        # --- variables x4 ---
+        "Что такое переменная": {
+            "title": "Три переменные",
+            "description": "Создайте три переменные и выведите их значения:\n- переменная city со значением Москва\n- переменная age со значением 20\n- переменная pi со значением 3.14\n\nПример вывода:\nМосква\n20\n3.14",
+            "test_cases": [{"input": "", "expected_output": "Москва\n20\n3.14"}],
+            "hints": ["Переменная создаётся так: имя = значение", "Строки пишутся в кавычках"],
+        },
+        "Числовые типы: int и float": {
+            "title": "Разница между int и float",
+            "description": "Создайте две пары переменных и выведите их.\nОбрати внимание: одинаковое значение, но разный тип — Python печатает их по-разному.\n\n- whole = 7\n- decimal = 7.0\n- neg_int = -3\n- neg_float = -3.5\n\nПример вывода:\n7\n7.0\n-3\n-3.5",
+            "test_cases": [{"input": "", "expected_output": "7\n7.0\n-3\n-3.5"}],
+            "hints": ["7 — это int, 7.0 — это float. Python выводит их по-разному", "Дробное число всегда содержит точку"],
+        },
+        "Строки и булевы значения": {
+            "title": "Строки и булевы переменные",
+            "description": "Создайте переменные:\n- name = Python\n- is_fun = True\n- is_hard = False\nВыведите каждую на отдельной строке.\n\nПример вывода:\nPython\nTrue\nFalse",
+            "test_cases": [{"input": "", "expected_output": "Python\nTrue\nFalse"}],
+            "hints": ["Строки — в кавычках, булевы — без: True, False"],
+        },
+        "type() и приведение типов": {
+            "title": "Узнай тип переменной",
+            "description": "Создайте переменную x = 42.\nВыведите:\n1. Тип переменной: type(x)\n2. Переменную в виде строки: str(x)\n3. Переменную в виде дробного числа: float(x)\n\nПример вывода:\n<class 'int'>\n42\n42.0",
+            "test_cases": [{"input": "", "expected_output": "<class 'int'>\n42\n42.0"}],
+            "hints": ["type() возвращает тип, str() и float() преобразуют тип"],
+        },
+        # --- operators x4 ---
+        "Арифметические операторы": {
+            "title": "Арифметика с переменными",
+            "description": "Создайте переменные a = 10 и b = 3.\nВыведите результаты четырёх операций:\na + b\na - b\na * b\na // b\n\nПример вывода:\n13\n7\n30\n3",
+            "test_cases": [{"input": "", "expected_output": "13\n7\n30\n3"}],
+            "hints": ["// — целочисленное деление"],
+        },
+        "Операторы сравнения": {
+            "title": "Результаты сравнений",
+            "description": "Создайте переменные x = 5 и y = 10.\nВыведите результат трёх сравнений:\nx > y\nx < y\nx == y\n\nПример вывода:\nFalse\nTrue\nFalse",
+            "test_cases": [{"input": "", "expected_output": "False\nTrue\nFalse"}],
+            "hints": ["Результат сравнения — это True или False"],
+        },
+        "Логические операторы": {
+            "title": "and, or, not",
+            "description": "Создайте переменные a = True и b = False.\nВыведите результаты трёх логических операций:\na and b\na or b\nnot a\n\nПример вывода:\nFalse\nTrue\nFalse",
+            "test_cases": [{"input": "", "expected_output": "False\nTrue\nFalse"}],
+            "hints": ["and — оба True, or — хотя бы одно True, not — инверсия"],
+        },
+        "Приоритет операторов": {
+            "title": "Приоритет в выражениях",
+            "description": "Вычислите и выведите результаты двух выражений:\n2 + 3 * 4\n(2 + 3) * 4\n\nПример вывода:\n14\n20",
+            "test_cases": [{"input": "", "expected_output": "14\n20"}],
+            "hints": ["Умножение выполняется раньше сложения", "Скобки меняют порядок"],
+        },
+        # --- io x4 ---
+        "Функция print() и аргументы": {
+            "title": "Аргументы print()",
+            "description": "Выведи три слова в одну строку через дефис, используя аргумент sep:\nprint(\"Python\", \"это\", \"круто\", sep=\"-\")\n\nПример вывода:\nPython-это-круто",
+            "test_cases": [{"input": "", "expected_output": "Python-это-круто"}],
+            "hints": ["Аргумент sep задаёт разделитель между элементами"],
+        },
+    }
+
+    fallback = BY_TITLE.get(lesson_title)
+    if fallback is None:
+        # Запасной по топику
+        BY_TOPIC = {
+            "io": {
+                "title": "Ввод и вывод",
+                "description": "Запросите у пользователя имя и выведите: Привет, {имя}!\n\nПример ввода:\nАнна\nПример вывода:\nПривет, Анна!",
+                "test_cases": [{"input": "Анна", "expected_output": "Привет, Анна!"}],
+                "hints": ["Используй input() и print()"],
+            },
+            "if_basic": {
+                "title": "Чётное или нечётное",
+                "description": "Дано число n = 7.\nЕсли число чётное — выведи Чётное, иначе — Нечётное.\n\nПример вывода:\nНечётное",
+                "test_cases": [{"input": "", "expected_output": "Нечётное"}],
+                "hints": ["Используй оператор % для проверки остатка"],
+            },
+        }
+        fallback = BY_TOPIC.get(topic, {
+            "title": "Практика по теме",
+            "description": "Создайте переменную result = 42 и выведите её.\n\nПример вывода:\n42",
+            "test_cases": [{"input": "", "expected_output": "42"}],
+            "hints": ["Используй print()"],
+        })
+
+    return {
+        "title": fallback["title"],
+        "description": fallback["description"],
+        "hints": fallback["hints"],
+        "test_cases": fallback["test_cases"],
+        "solution_template": "# Напишите решение здесь\n",
+        "category": topic,
+    }
+
+
 def _is_ai_error(text: str) -> bool:
     """Возвращает True если текст — ошибка AI, сырой JSON или разговорный ответ вместо markdown."""
     if not text:
@@ -120,6 +246,9 @@ class LessonService:
             "examples": json.loads(lesson.code_examples) if lesson.code_examples else [],
         }
 
+    # Темы где задач по программированию нет — только теория
+    THEORY_ONLY_TOPICS = {"python_intro"}
+
     async def get_or_create_lesson_task(self, lesson_id: int) -> dict:
         """
         Возвращает существующее задание для урока или генерирует новое (один раз).
@@ -130,6 +259,10 @@ class LessonService:
         lesson = await self.lesson_repo.get_lesson_by_id(lesson_id)
         if not lesson:
             raise HTTPException(status_code=404, detail="Урок не найден")
+
+        # Теоретические уроки — задача с кодом не нужна
+        if lesson.topic in self.THEORY_ONLY_TOPICS:
+            return {"no_task": True}
 
         task_repo = TaskRepository(self.db)
 
@@ -154,13 +287,45 @@ class LessonService:
         # Собираем все уже существующие названия задач — чтобы AI не повторял
         all_used_titles = await task_repo.get_all_titles()
 
-        # Генерируем задание с учётом пройденного материала и запретом повторений
-        task_data = await ai_service.generate_task(
-            lesson.topic, "easy", lesson.title,
-            prev_topics=prev_topics,
-            used_titles=all_used_titles if all_used_titles else None,
-            theory_content=lesson.theory_content or None,
-        )
+        # Определяем разрешённые концепции — нужны для валидации после генерации
+        topics_set = set(prev_topics)
+        IO_TOPICS = {"io", "io_basics", "input_output", "fstring"}
+        input_allowed = bool(topics_set & IO_TOPICS) or lesson.topic in IO_TOPICS
+
+        # Генерируем задание с учётом пройденного материала и запретом повторений.
+        # До 3 попыток: если AI вставил input() несмотря на запрет — пробуем снова.
+        task_data = None
+        for _attempt in range(3):
+            candidate = await ai_service.generate_task(
+                lesson.topic, "easy", lesson.title,
+                prev_topics=prev_topics,
+                used_titles=all_used_titles if all_used_titles else None,
+                theory_content=lesson.theory_content or None,
+            )
+            if _is_ai_error(candidate.get("description", "")):
+                # AI вернул ошибку — пробуем ещё раз, не сохраняем кандидата
+                continue
+            # Валидация: если input() запрещён, но тест-кейсы имеют непустой input
+            # или описание явно просит ввод — задача невалидна, генерируем заново
+            if not input_allowed:
+                has_input_in_tests = any(
+                    tc.get("input", "").strip()
+                    for tc in candidate.get("test_cases", [])
+                )
+                desc_lower = candidate.get("description", "").lower()
+                has_input_in_desc = any(
+                    kw in desc_lower
+                    for kw in ["введите", "запросит", "запрашивает", "input()", "ввод"]
+                )
+                if has_input_in_tests or has_input_in_desc:
+                    continue  # AI нарушил ограничение, пробуем ещё раз
+            task_data = candidate
+            break
+
+        if task_data is None:
+            # Все 3 попытки нарушили ограничения — AI не справляется с этим топиком.
+            # Используем гарантированно корректную задачу без input() для раннего уровня.
+            task_data = _safe_fallback_task(lesson.topic, lesson.title)
 
         # Принудительно зачищаем solution_template для обычных уроков —
         # AI игнорирует инструкцию и вставляет готовое решение

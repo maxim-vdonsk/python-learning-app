@@ -8,6 +8,7 @@ from app.repositories.task_repository import TaskRepository
 from app.repositories.submission_repository import SubmissionRepository
 from app.repositories.progress_repository import ProgressRepository
 from app.repositories.user_repository import UserRepository
+from app.repositories.lesson_repository import LessonRepository
 from app.services.ai_service import ai_service
 from app.services.sandbox_service import sandbox_service
 from app.services.achievement_service import AchievementService
@@ -59,12 +60,19 @@ class TaskService:
             error_msg = first_error
 
         # AI analysis
+        prev_topics = []
+        if task.lesson_id:
+            lesson_repo = LessonRepository(self.db)
+            prev_topics = await lesson_repo.get_previous_topics(task.lesson_id)
+
         ai_result = await ai_service.analyze_code(
             code=code,
             task_description=task.description,
             is_correct=is_correct,
             execution_time_ms=execution_time,
             error=error_msg,
+            topic=task.category,
+            prev_topics=prev_topics,
         )
 
         # Update submission

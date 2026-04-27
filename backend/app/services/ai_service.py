@@ -160,6 +160,13 @@ class AIService:
                     # Если не распарсили, продолжаем проверки ниже
                     pass
             
+            # Проверяем на китайские сообщения об ошибках провайдеров
+            if any('一' <= c <= '鿿' for c in successful_response[:200]):
+                last_error = f"{label}: ответ на китайском (rate limit провайдера)"
+                logger.warning(f"AI: {last_error}")
+                successful_response = None
+                continue
+
             # Проверяем на подозрительные ответы
             if (len(successful_response) <= 5
                     or "log in" in successful_response[:50].lower()
@@ -296,6 +303,10 @@ class AIService:
                 "\nТИП ЗАДАЧИ: «Найди и исправь ошибку»\n"
                 "- В поле solution_template дай СЛОМАННЫЙ код с одной намеренной ошибкой\n"
                 "  (SyntaxError, NameError, TypeError или логическая ошибка)\n"
+                "- КРИТИЧЕСКИ ВАЖНО: сломанный код в solution_template должен использовать\n"
+                "  ТОЛЬКО конструкции из разрешённого списка выше — ничего сложнее!\n"
+                "  Если разрешён только print() — ломай только print() или строковые литералы.\n"
+                "  НЕЛЬЗЯ вставлять input(), try/except, def, циклы, если они не в разрешённых.\n"
                 "- В description объясни что программа ДОЛЖНА делать (не как исправить)\n"
                 "- test_cases проверяют УЖЕ ИСПРАВЛЕННЫЙ правильный код\n"
                 "- В hints дай подсказку какой тип ошибки допущен, но не говори где именно\n"
@@ -309,17 +320,17 @@ class AIService:
 
         # Блок с содержанием теории урока
         if theory_content:
-            # Берём первые 1200 символов, убираем markdown-символы для экономии токенов
             import re as _re
-            trimmed = _re.sub(r'#{1,6}\s*', '', theory_content)[:1200].strip()
+            # Убираем блоки кода — они содержат примеры с непройденными конструкциями
+            # и сбивают AI: он видит try/except в теории и строит задание на их основе
+            no_code = _re.sub(r'```[\s\S]*?```', '', theory_content)
+            trimmed = _re.sub(r'#{1,6}\s*', '', no_code)[:800].strip()
             theory_block = (
-                "\nСОДЕРЖАНИЕ УРОКА:\n"
+                "\nКОНТЕКСТ УРОКА (только для понимания темы, НЕ как образец для задачи):\n"
                 + trimmed
                 + "\n"
-                "\nВАЖНО: определи ГЛАВНУЮ практическую концепцию этого урока"
-                " (не второстепенную) и проверяй в задаче именно её.\n"
-                "Например, если урок про ошибки — задача должна содержать намеренно"
-                " сломанный код или требовать обработки ошибки, а не просто print().\n"
+                "\nВАЖНО: задача должна проверять тему урока, но использовать"
+                " ТОЛЬКО конструкции из разрешённого списка выше.\n"
             )
         else:
             theory_block = ""
@@ -343,6 +354,13 @@ class AIService:
 - Задача проверяет ТОЛЬКО тему «{lesson_title}» — ничего сложнее
 - Решение должно умещаться в знания из пройденных тем + текущей темы
 - Конкретные входные/выходные данные для тест-кейсов
+- КРИТИЧЕСКИ ВАЖНО про обработку ошибок:
+  * Если задача требует try/except — ОБЯЗАТЕЛЬНО напиши в description фразу вроде
+    «Используй конструкцию try/except для обработки ошибки ValueError»
+  * Если тест-кейсы содержат некорректный ввод (буквы вместо чисел и т.п.) —
+    ОБЯЗАТЕЛЬНО укажи это в description: что именно нужно обработать и как
+  * Если обработка ошибок НЕ нужна — не упоминай её вообще
+  * Студент должен точно знать из описания задачи: нужно ли try/except или нет
 
 ПРАВИЛА ДЛЯ TEST_CASES (строго соблюдать):
 - "input" — это то, что передаётся в stdin (то, что студент вводит через клавиатуру).
@@ -384,19 +402,102 @@ class AIService:
         is_correct: bool,
         execution_time_ms: Optional[float] = None,
         error: Optional[str] = None,
+        topic: Optional[str] = None,
+        prev_topics: list | None = None,
     ) -> dict:
         """Анализирует код студента, возвращает отзыв и оценку."""
+        # Строим точный список разрешённых конструкций по пройденным темам.
+        # Используем точные имена топиков из БД — без подстрочного поиска,
+        # иначе "print" даёт ложный матч в "print_basics" и открывает input().
+        if prev_topics is not None:
+            topics_set = set(prev_topics)
+            allowed = ["print()", "строковые литералы"]
+            VAR_TOPICS   = {"variables", "int-float", "str-bool", "type_conv", "practice_basics"}
+            OP_TOPICS    = {"operators", "arithmetic", "comparison", "logical", "operator"}
+            IO_TOPICS    = {"io", "io_basics", "input_output", "fstring"}
+            IF_TOPICS    = {"if_basic", "elif", "boolean", "conditions_practice",
+                            "conditions_project", "ternary", "match"}
+            LOOP_TOPICS  = {"while_basics", "for_basics", "loops_advanced",
+                            "loops_practice", "loops_project"}
+            FUNC_TOPICS  = {"functions_basics", "functions_advanced",
+                            "functions_practice", "functions_project"}
+            STR_TOPICS   = {"strings_basics", "strings_advanced",
+                            "strings_practice", "str_method", "slicing"}
+            LIST_TOPICS  = {"lists_basics", "lists_advanced",
+                            "lists_practice", "listcomp"}
+            DICT_TOPICS  = {"dict_basics", "dict_advanced", "sets", "tuples"}
+            EXC_TOPICS   = {"exceptions_basics", "exceptions_advanced",
+                            "exceptions_practice", "exception", "try_except"}
+
+            if topics_set & VAR_TOPICS:
+                allowed += ["переменные", "int()", "float()", "str()"]
+            if topics_set & OP_TOPICS:
+                allowed += ["арифметические операторы (+, -, *, /)", "операторы сравнения"]
+            if topics_set & IO_TOPICS:
+                allowed += ["input()", "f-строки"]
+            if topics_set & IF_TOPICS:
+                allowed += ["if/elif/else"]
+            if topics_set & LOOP_TOPICS:
+                allowed += ["циклы for и while", "range()"]
+            if topics_set & FUNC_TOPICS:
+                allowed += ["функции (def, return)"]
+            if topics_set & STR_TOPICS:
+                allowed += ["методы строк", "split()", "join()"]
+            if topics_set & LIST_TOPICS:
+                allowed += ["списки", "list comprehension"]
+            if topics_set & DICT_TOPICS:
+                allowed += ["словари, множества, кортежи"]
+            if topics_set & EXC_TOPICS:
+                allowed += ["try/except"]
+            # Текущая тема тоже разрешена
+            if topic and topic in EXC_TOPICS:
+                allowed += ["try/except"]
+            if topic and topic in IO_TOPICS:
+                allowed += ["input()", "f-строки"]
+
+            allowed_str = ", ".join(allowed)
+            topic_constraint = (
+                f"Студент изучает тему «{topic or ''}». "
+                f"Пройденные конструкции: {allowed_str}. "
+                "Рекомендации давай ТОЛЬКО из этого списка. "
+                "ЗАПРЕЩЕНО советовать что-либо сверх пройденного — "
+                "ни int(), ни try/except, ни split(), ни что-либо другое, "
+                "если этого нет в списке выше. "
+            )
+        elif topic:
+            topic_constraint = (
+                f"Текущая тема студента: «{topic}». "
+                "Давай рекомендации ТОЛЬКО в рамках базовых концепций этой темы. "
+            )
+        else:
+            topic_constraint = ""
         system = (
             "Ты — доброжелательный ментор Python. "
             "Оценивай код по критериям: правильность логики, читаемость, эффективность. "
             "ВАЖНО: Не придирайся к формату ввода (input/split/отдельные строки) — это не ошибка. "
             "Если код проходит тесты — он правильный, даже если стиль ввода отличается от примера. "
             "Фокусируйся на логике, алгоритмах, именовании переменных. "
+            f"{topic_constraint}"
             "Отвечай на русском языке, только валидным JSON."
         )
         status  = "ПРАВИЛЬНО" if is_correct else "НЕПРАВИЛЬНО"
         t_str   = f"{execution_time_ms:.1f}мс" if execution_time_ms else "?"
         err_str = f"\nОшибка: {error}" if error else ""
+        topic_str = f"\nТема урока: {topic}" if topic else ""
+        # Блок запрета выносим прямо в тело промпта — system-промпт AI игнорирует
+        if prev_topics is not None:
+            allowed_str = ", ".join(allowed)
+            restrictions_str = (
+                f"\n\nСТРОГОЕ ОГРАНИЧЕНИЕ ПО УРОВНЮ СТУДЕНТА:"
+                f"\nСтудент знает ТОЛЬКО: {allowed_str}."
+                f"\nВ поле recommendations ЗАПРЕЩЕНО упоминать что-либо другое."
+                f"\nЗАПРЕЩЕНО: try/except, map(), split(), float(), lambda, "
+                f"list comprehension, zip(), enumerate(), классы — "
+                f"даже если они кажутся уместными."
+                f"\nЕсли улучшений в рамках пройденного нет — верни пустой список []."
+            )
+        else:
+            restrictions_str = ""
 
         prompt = f"""Проанализируй код студента:
 
@@ -405,7 +506,7 @@ class AIService:
 ```python
 {code[:1200]}
 ```
-Статус тестов: {status} | Время выполнения: {t_str}{err_str}
+Статус тестов: {status} | Время выполнения: {t_str}{err_str}{topic_str}{restrictions_str}
 
 КРИТЕРИИ ОЦЕНКИ:
 - Если тесты пройдены (статус ПРАВИЛЬНО) — код рабочий, ставь 80-100 баллов
@@ -417,7 +518,7 @@ class AIService:
 {{
   "feedback": "подробный разбор 2-3 абзаца: что правильно, что можно улучшить",
   "score": 85,
-  "recommendations": ["конкретный совет 1", "конкретный совет 2"],
+  "recommendations": ["совет ТОЛЬКО из пройденных конструкций, или [] если нечего добавить"],
   "style_issues": ["если есть проблемы с именованием/стилем"],
   "performance_note": "заметка по производительности если есть"
 }}"""
