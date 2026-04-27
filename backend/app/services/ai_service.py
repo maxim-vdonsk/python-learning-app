@@ -444,18 +444,48 @@ class AIService:
         """Извлекает первый валидный JSON-объект из текста."""
         import re
 
+        def _clean(raw: str) -> str:
+            """Убирает спам-строки после JSON и склеивает конкатенацию строк."""
+            # Убираем строки-спам после закрывающей } (не внутри JSON)
+            brace_depth = 0
+            json_end = -1
+            in_string = False
+            escape = False
+            for i, ch in enumerate(raw):
+                if escape:
+                    escape = False
+                    continue
+                if ch == '\\' and in_string:
+                    escape = True
+                    continue
+                if ch == '"' and not escape:
+                    in_string = not in_string
+                if not in_string:
+                    if ch == '{':
+                        brace_depth += 1
+                    elif ch == '}':
+                        brace_depth -= 1
+                        if brace_depth == 0:
+                            json_end = i
+                            break
+            if json_end != -1:
+                raw = raw[:json_end + 1]
+            # Склеиваем конкатенацию строк вида "abc\n" + "def" → "abc\ndef"
+            raw = re.sub(r'"\s*\+\s*"', '', raw)
+            return raw
+
         # 1. ```json ... ``` с закрывающими тройными кавычками
         fence = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
         if fence:
             try:
-                return json.loads(fence.group(1))
+                return json.loads(_clean(fence.group(1)))
             except json.JSONDecodeError:
                 pass
 
         # 2. ```json ... без закрывающих ``` (OperaAria иногда обрывает)
         fence_open = re.search(r'```(?:json)?\s*(\{.*)', text, re.DOTALL)
         if fence_open:
-            candidate = fence_open.group(1).rstrip('`').strip()
+            candidate = _clean(fence_open.group(1).rstrip('`').strip())
             s = candidate.find('{')
             e = candidate.rfind('}') + 1
             if s != -1 and e > s:
@@ -466,10 +496,10 @@ class AIService:
 
         # 3. Голый JSON в тексте
         start = text.find('{')
-        end   = text.rfind('}') + 1
-        if start != -1 and end > start:
+        if start != -1:
+            candidate = _clean(text[start:])
             try:
-                return json.loads(text[start:end])
+                return json.loads(candidate)
             except json.JSONDecodeError:
                 pass
 

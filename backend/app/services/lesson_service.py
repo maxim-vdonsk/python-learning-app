@@ -21,8 +21,11 @@ def _is_ai_error(text: str) -> bool:
     if text.startswith("[AI недоступен]"):
         return True
     stripped = text.strip()
-    # Сырой JSON сохранился вместо markdown ({"theory": ...} или Привет! ... {"theory": ...})
+    # Сырой JSON теории сохранился вместо markdown
     if '"theory"' in stripped and '"examples"' in stripped:
+        return True
+    # Сырой JSON задачи попал в description (парсинг упал, вернулся fallback с resp)
+    if stripped.startswith('{') and '"test_cases"' in stripped and '"title"' in stripped:
         return True
     return False
 
