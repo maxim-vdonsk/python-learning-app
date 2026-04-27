@@ -116,28 +116,28 @@ async def regenerate_lesson_task(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Generate a new task for a specific lesson (replaces existing one)."""
+    """Сгенерировать новое задание для урока (заменяет текущее)."""
     from app.services.lesson_service import LessonService
+    from app.repositories.task_repository import TaskRepository
     from fastapi import HTTPException
-    
+    import asyncio
+
     lesson_service = LessonService(db)
-    
-    # Get lesson to get topic and difficulty
+
     lesson = await lesson_service.lesson_repo.get_lesson_by_id(lesson_id)
     if not lesson:
         raise HTTPException(status_code=404, detail="Урок не найден")
-    
-    # Get previous topics for curriculum context
-    prev_topics = await lesson_service.lesson_repo.get_previous_topics(lesson_id)
 
-    # Generate new task
-    task_service = TaskService(db)
-    new_task = await task_service.generate_ai_task(
-        topic=lesson.topic,
-        difficulty="easy",
-        lesson_id=lesson_id,
-        lesson_title=lesson.title,
-        prev_topics=prev_topics,
-    )
-    
-    return new_task
+    # Отвязываем текущее задание — чтобы get_or_create сгенерировал новое
+    task_repo = TaskRepository(db)
+    await task_repo.unlink_from_lesson(lesson_id)
+    await db.commit()
+
+    try:
+        result = await asyncio.wait_for(
+            lesson_service.get_or_create_lesson_task(lesson_id),
+            timeout=60,
+        )
+        return result
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Превышено время ожидания генерации задачи")
