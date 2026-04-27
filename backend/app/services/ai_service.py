@@ -209,7 +209,8 @@ class AIService:
     async def generate_task(self, topic: str, difficulty: str,
                             lesson_title: str,
                             prev_topics: list[str] | None = None,
-                            used_titles: list[str] | None = None) -> dict:
+                            used_titles: list[str] | None = None,
+                            theory_content: str | None = None) -> dict:
         """
         Генерирует задачу по теме и сложности.
 
@@ -285,6 +286,19 @@ class AIService:
                 "  ✗ input(), списки, словари, классы и всё остальное\n"
             )
 
+        # Блок с содержанием теории урока
+        if theory_content:
+            # Берём первые 1200 символов, убираем markdown-символы для экономии токенов
+            import re as _re
+            trimmed = _re.sub(r'#{1,6}\s*', '', theory_content)[:1200].strip()
+            theory_block = (
+                "\nСОДЕРЖАНИЕ УРОКА (задача должна проверять именно это, ничего другого):\n"
+                + trimmed
+                + "\n"
+            )
+        else:
+            theory_block = ""
+
         # Блок запрета повторений
         if used_titles:
             used_titles_block = (
@@ -299,7 +313,7 @@ class AIService:
 
 ТЕКУЩАЯ ТЕМА УРОКА: «{lesson_title}» (topic: {topic})
 СЛОЖНОСТЬ: {difficulty} ({hints_map.get(difficulty, '')})
-{prev_block}{forbidden_block}{used_titles_block}
+{prev_block}{forbidden_block}{used_titles_block}{theory_block}
 ТРЕБОВАНИЯ:
 - Задача проверяет ТОЛЬКО тему «{lesson_title}» — ничего сложнее
 - Решение должно умещаться в знания из пройденных тем + текущей темы

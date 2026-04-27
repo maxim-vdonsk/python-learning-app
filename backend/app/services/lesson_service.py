@@ -159,6 +159,7 @@ class LessonService:
             lesson.topic, "easy", lesson.title,
             prev_topics=prev_topics,
             used_titles=all_used_titles if all_used_titles else None,
+            theory_content=lesson.theory_content or None,
         )
 
         # Если AI вернул ошибку — возвращаем заглушку без сохранения в БД
